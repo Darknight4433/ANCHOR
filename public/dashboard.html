@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Manager Panel - Game Server Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #2a5298;
+        }
+
+        .auth-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .user-badge {
+            background: #2a5298;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #1e3c72;
+        }
+
+        button.secondary {
+            background: #666;
+        }
+
+        button.secondary:hover {
+            background: #555;
+        }
+
+        button.danger {
+            background: #dc3545;
+        }
+
+        button.danger:hover {
+            background: #c82333;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2a5298;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .servers-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .section-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .create-server {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .create-server input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .create-server select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .server-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 15px;
+        }
+
+        .server-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .server-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .server-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-error {
+            background: #f5c6cb;
+            color: #721c24;
+        }
+
+        .server-info {
+            font-size: 13px;
+            color: #666;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .server-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .server-actions button {
+            flex: 1;
+            min-width: 80px;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .logs-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .logs-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        .log-line {
+            margin: 2px 0;
+            word-wrap: break-word;
+        }
+
+        .log-error {
+            color: #f48771;
+        }
+
+        .log-warn {
+            color: #ce9178;
+        }
+
+        .log-info {
+            color: #569cd6;
+        }
+
+        .log-timestamp {
+            color: #858585;
+        }
+
+        .status-bar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .status-indicator {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .indicator-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+        }
+
+        .indicator-dot.offline {
+            background: #f44336;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .server-list {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🎮 Game Server Panel</h1>
+                <p style="color: #666; font-size: 14px;">Process Manager Dashboard</p>
+            </div>
+            <div class="auth-info">
+                <div class="user-badge" id="userBadge">User: admin</div>
+                <button class="secondary" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <div class="stat-card">
+                <div class="stat-label">Active Servers</div>
+                <div class="stat-value" id="activeServersCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Processes</div>
+                <div class="stat-value" id="totalProcessesCount">0</div>
+            </div>
+        </div>
+
+        <div class="servers-section">
+            <div class="section-header">
+                <h2>Managed Servers</h2>
+            </div>
+
+            <div class="create-server">
+                <input type="text" id="serverName" placeholder="Server name">
+                <select id="serverType">
+                    <option value="">Select Server Type</option>
+                    <option value="minecraft">Minecraft</option>
+                    <option value="csgo">CS:GO</option>
+                    <option value="rust">Rust</option>
+                    <option value="valheim">Valheim</option>
+                </select>
+                <button onclick="createServer()">Create Server</button>
+            </div>
+
+            <div class="server-list" id="serverList">
+                <p style="grid-column: 1/-1; color: #999;">No servers yet</p>
+            </div>
+        </div>
+
+        <div class="logs-section">
+            <div class="section-header">
+                <h2>Live Logs</h2>
+            </div>
+            <div class="logs-container" id="logsContainer">
+                <p style="color: #666;">Waiting for log entries...</p>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span>© 2026 Process Manager - Game Server Platform</span>
+            <div class="status-indicator">
+                <span>API Status:</span>
+                <div class="indicator-dot" id="apiStatus"></div>
+                <span id="apiStatusText">Connecting...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token');
+        let ws = null;
+
+        // Check authentication
+        if (!token) {
+            redirectToLogin();
+        }
+
+        // API base URL
+        const API_URL = `http://${window.location.hostname}:3000/api`;
+        const WS_URL = `ws://${window.location.hostname}:3000`;
+
+        // Connect WebSocket
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                updateApiStatus(true);
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            };
+
+            ws.onerror = () => {
+                updateApiStatus(false);
+            };
+
+            ws.onclose = () => {
+                updateApiStatus(false);
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(message) {
+            if (message.type === 'log') {
+                addLogLine(message.data);
+            } else if (message.type === 'server-created') {
+                loadServers();
+            } else if (message.type === 'server-stopped') {
+                loadServers();
+            } else if (message.type === 'server-restarted') {
+                loadServers();
+            }
+        }
+
+        // Update API status indicator
+        function updateApiStatus(online) {
+            const dot = document.getElementById('apiStatus');
+            const text = document.getElementById('apiStatusText');
+
+            if (online) {
+                dot.classList.remove('offline');
+                text.textContent = 'Online';
+            } else {
+                dot.classList.add('offline');
+                text.textContent = 'Offline';
+            }
+        }
+
+        // Load servers from API
+        async function loadServers() {
+            try {
+                const response = await fetch(`${API_URL}/servers`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load servers');
+
+                const data = await response.json();
+                displayServers(data.servers);
+
+                // Update stats
+                const running = data.servers.filter(s => s.status === 'running').length;
+                document.getElementById('activeServersCount').textContent = running;
+                document.getElementById('totalProcessesCount').textContent = data.servers.length;
+            } catch (error) {
+                console.error('Error loading servers:', error);
+            }
+        }
+
+        // Display servers
+        function displayServers(servers) {
+            const list = document.getElementById('serverList');
+
+            if (servers.length === 0) {
+                list.innerHTML = '<p style="grid-column: 1/-1; color: #999;">No servers yet</p>';
+                return;
+            }
+
+            list.innerHTML = servers.map(server => `
+                <div class="server-card">
+                    <div class="server-header">
+                        <div class="server-name">${server.name}</div>
+                        <div class="server-status status-${server.status}">${server.status.toUpperCase()}</div>
+                    </div>
+                    <div class="server-info">
+                        <strong>Type:</strong> ${server.type}<br>
+                        <strong>Runtime:</strong> ${server.runtime}<br>
+                        <strong>PID:</strong> ${server.pid || 'N/A'}<br>
+                        <strong>Uptime:</strong> ${formatUptime(server.uptime || 0)}<br>
+                        <strong>Created:</strong> ${new Date(server.createdAt).toLocaleString()}
+                    </div>
+                    <div class="server-actions">
+                        ${server.status === 'running' 
+                            ? `
+                                <button onclick="stopServer('${server.name}')">Stop</button>
+                                <button onclick="restartServer('${server.name}')">Restart</button>
+                            `
+                            : `
+                                <button onclick="startServer('${server.name}', '${server.type}')">Start</button>
+                            `
+                        }
+                        <button class="danger" onclick="deleteServer('${server.name}')">Delete</button>
+                        <button onclick="viewLogs('${server.name}')">Logs</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Format uptime
+        function formatUptime(ms) {
+            if (ms < 1000) return `${ms}ms`;
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+
+            if (hours > 0) return `${hours}h ${minutes % 60}m`;
+            if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+            return `${seconds}s`;
+        }
+
+        // Create server
+        async function createServer() {
+            const name = document.getElementById('serverName').value;
+            const type = document.getElementById('serverType').value;
+
+            if (!name || !type) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/servers`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name, type, options: {} })
+                });
+
+                if (!response.ok) throw new Error('Failed to create server');
+
+                document.getElementById('serverName').value = '';
+                document.getElementById('serverType').value = '';
+                loadServers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Start server
+        async function startServer(name, type) {
+            try {
+                const response = await fetch(`${API_URL}/servers/${name}/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ type, options: {} })
+                });
+
+                if (!response.ok) throw new Error('Failed to start server');
+                loadServers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Stop server
+        async function stopServer(name) {
+            if (!confirm(`Stop server "${name}"?`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/servers/${name}/stop`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ force: false })
+                });
+
+                if (!response.ok) throw new Error('Failed to stop server');
+                loadServers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Restart server
+        async function restartServer(name) {
+            try {
+                const response = await fetch(`${API_URL}/servers/${name}/restart`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to restart server');
+                loadServers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Delete server
+        async function deleteServer(name) {
+            if (!confirm(`Delete server "${name}"? This cannot be undone.`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/servers/${name}?force=true`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to delete server');
+                loadServers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // View logs
+        async function viewLogs(name) {
+            try {
+                const response = await fetch(`${API_URL}/servers/${name}/logs`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load logs');
+
+                const data = await response.json();
+                displayLogs(data.logs);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Display logs
+        function displayLogs(logs) {
+            const container = document.getElementById('logsContainer');
+            container.innerHTML = logs.map(log => {
+                const className = log.level ? `log-${log.level}` : '';
+                const timestamp = log.timestamp ? `<span class="log-timestamp">[${new Date(log.timestamp).toLocaleTimeString()}]</span>` : '';
+                const message = typeof log === 'string' ? log : log.message;
+                return `<div class="log-line ${className}">${timestamp} ${message}</div>`;
+            }).join('');
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Add log line
+        function addLogLine(logData) {
+            const container = document.getElementById('logsContainer');
+            const line = document.createElement('div');
+            line.className = `log-line ${logData.level ? `log-${logData.level}` : ''}`;
+
+            const timestamp = `<span class="log-timestamp">[${new Date(logData.timestamp).toLocaleTimeString()}]</span>`;
+            line.innerHTML = `${timestamp} ${logData.message}`;
+
+            container.appendChild(line);
+            container.scrollTop = container.scrollHeight;
+
+            // Keep max 1000 lines
+            while (container.children.length > 1000) {
+                container.removeChild(container.firstChild);
+            }
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('token');
+            redirectToLogin();
+        }
+
+        // Redirect to login
+        function redirectToLogin() {
+            window.location.href = 'login.html';
+        }
+
+        // Initialize
+        connectWebSocket();
+        loadServers();
+
+        // Refresh servers every 5 seconds
+        setInterval(loadServers, 5000);
+    </script>
+</body>
+</html>

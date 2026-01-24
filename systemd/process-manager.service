@@ -1,0 +1,29 @@
+[Unit]
+Description=Process Manager Daemon Service
+Documentation=https://github.com/your-org/process-manager
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pm-daemon
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=%h/.process-manager
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pm-daemon
+
+# User - can be changed to run as specific user
+User=root
+
+[Install]
+WantedBy=multi-user.target

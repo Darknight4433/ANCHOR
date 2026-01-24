@@ -1,0 +1,42 @@
+# Process Manager Configuration
+# This file configures the daemon service
+
+daemon:
+  # Port for HTTP API (if enabled)
+  port: 9876
+  host: localhost
+  
+  # Enable Unix socket communication
+  enableSocket: true
+  
+  # Logging level: error, warn, info, debug
+  logLevel: info
+
+processes:
+  # Automatically start processes on daemon startup
+  autoStart: true
+  
+  # Automatically restart crashed processes
+  autoRestart: true
+  
+  # Delay before restarting (in milliseconds)
+  restartDelay: 1000
+  
+  # Timeout for graceful shutdown (in milliseconds)
+  gracefulShutdownTimeout: 5000
+
+persistence:
+  # Enable state persistence
+  enabled: true
+  
+  # How often to save state (in milliseconds)
+  saveInterval: 10000
+  
+  # Data directory (null = use default ~/.process-manager)
+  dataDirectory: null
+
+# Environment variables for all processes
+environment:
+  NODE_ENV: production
+  # Add more environment variables as needed
+  # LOG_LEVEL: debug
