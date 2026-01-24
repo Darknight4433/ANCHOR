@@ -1,5 +1,7 @@
 const ProcessManager = require('../src/index.js');
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Test suite for ProcessManager
@@ -7,6 +9,12 @@ const assert = require('assert');
 
 async function runTests() {
   console.log('🧪 Running ProcessManager Tests\n');
+
+  // Clear persisted state before tests (for fresh state)
+  const stateDir = path.join(process.env.HOME || '/tmp', '.process-manager');
+  if (fs.existsSync(stateDir)) {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 
   const pm = new ProcessManager();
   let testsPassed = 0;

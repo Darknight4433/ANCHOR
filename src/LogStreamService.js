@@ -1,10 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const EventEmitter = require('events');
+const FsUtils = require('./FsUtils.js');
+const LogRecovery = require('./LogRecovery.js');
 
 /**
- * LogStreamService - Manages real-time log streaming
- * Supports both file-based and stream-based logging
+ * LogStreamService - Production-grade real-time log streaming
+ * Uses FsUtils for guaranteed file operations
+ * Uses LogRecovery for graceful error handling
+ * Implements Principle 3 (File System Guarantees) and Principle 5 (Logging Architecture)
  */
 class LogStreamService extends EventEmitter {
   constructor(logDir = null) {
@@ -14,21 +18,24 @@ class LogStreamService extends EventEmitter {
     this.watchers = new Map();
     this.buffers = new Map();
     this.maxBufferSize = 10000; // Lines per buffer
+    this.recovery = new LogRecovery(); // Error recovery handler
 
     this.ensureLogDirectory();
   }
 
   /**
-   * Ensure log directory exists
+   * Ensure log directory exists (Principle 3: guaranteed)
    */
   ensureLogDirectory() {
-    if (!fs.existsSync(this.logDir)) {
-      fs.mkdirSync(this.logDir, { recursive: true, mode: 0o755 });
+    try {
+      FsUtils.ensureDir(this.logDir);
+    } catch (error) {
+      this.emit('error', { error: new Error(`Failed to ensure log directory: ${error.message}`) });
     }
   }
 
   /**
-   * Start logging for a process
+   * Start logging for a process (Principle 2: correct lifecycle order)
    */
   startLogging(processName, options = {}) {
     const { maxSize = this.maxBufferSize, persist = true } = options;
@@ -41,20 +48,30 @@ class LogStreamService extends EventEmitter {
     });
 
     if (persist) {
-      // Create log file
-      const logFile = this.getLogFilePath(processName);
-      const writeStream = fs.createWriteStream(logFile, { flags: 'a' });
+      try {
+        // Ensure directory exists FIRST (Principle 3)
+        FsUtils.ensureDir(this.logDir);
+        
+        // Ensure log file exists SECOND (Principle 3)
+        const logFile = this.getLogFilePath(processName);
+        FsUtils.ensureFile(logFile);
 
-      writeStream.on('error', (error) => {
-        this.emit('error', { processName, error, action: 'write' });
-      });
+        // NOW create write stream (guaranteed safe)
+        const writeStream = fs.createWriteStream(logFile, { flags: 'a' });
 
-      writeStream.on('open', () => {
-        // Only watch file after it's been opened/created
-        this.watchLogFile(processName, logFile);
-      });
+        writeStream.on('error', (error) => {
+          this.emit('error', { processName, error, action: 'write' });
+        });
 
-      this.streams.set(processName, writeStream);
+        writeStream.on('open', () => {
+          // Watch file (now guaranteed to exist)
+          this.watchLogFile(processName, logFile);
+        });
+
+        this.streams.set(processName, writeStream);
+      } catch (error) {
+        this.emit('error', { processName, error, action: 'start-logging' });
+      }
     }
 
     this.emit('logging-started', { processName });
@@ -82,7 +99,7 @@ class LogStreamService extends EventEmitter {
   }
 
   /**
-   * Write log entry
+   * Write log entry (uses LogRecovery for error handling - Principle 5)
    */
   write(processName, message, level = 'info', metadata = {}) {
     const timestamp = new Date().toISOString();
@@ -104,11 +121,18 @@ class LogStreamService extends EventEmitter {
       }
     }
 
-    // Write to file
+    // Write to file with recovery
     const stream = this.streams.get(processName);
     if (stream) {
       const logLine = `[${timestamp}] [${level.toUpperCase()}] ${message}${Object.keys(metadata).length > 0 ? ` ${JSON.stringify(metadata)}` : ''}\n`;
-      stream.write(logLine);
+      
+      // Wrap with recovery: if write fails, attempt to recover
+      this.recovery.withRecovery(processName, this.getLogFilePath(processName), () => {
+        stream.write(logLine);
+      }).catch(error => {
+        // Only emit if recovery completely failed
+        this.emit('error', { processName, error, action: 'write-recovery-failed' });
+      });
     }
 
     this.emit('log', { processName, logEntry });
@@ -161,7 +185,7 @@ class LogStreamService extends EventEmitter {
   }
 
   /**
-   * Watch log file for external changes
+   * Watch log file for external changes (with LogRecovery - Principle 5)
    */
   watchLogFile(processName, logFile) {
     try {
@@ -172,10 +196,16 @@ class LogStreamService extends EventEmitter {
       });
 
       watcher.on('error', (error) => {
-        // File might be deleted, stop watching
-        if (error.code !== 'ENOENT') {
-          this.emit('error', { processName, error, action: 'watch' });
-        }
+        // Use LogRecovery for watcher errors
+        this.recovery.handleWatcherError(processName, logFile, error)
+          .then(() => {
+            this.emit('watcher-recovered', { processName });
+          })
+          .catch(recoveryError => {
+            if (error.code !== 'ENOENT') {
+              this.emit('error', { processName, error: recoveryError, action: 'watch-recovery' });
+            }
+          });
       });
 
       this.watchers.set(processName, watcher);
@@ -196,11 +226,16 @@ class LogStreamService extends EventEmitter {
   }
 
   /**
-   * Read log file
+   * Read log file (with FsUtils guarantees)
    */
   async readLogFile(processName, lines = 100) {
     try {
       const logFile = this.getLogFilePath(processName);
+
+      // Use FsUtils.isSafePath to prevent traversal attacks
+      if (!FsUtils.isSafePath(this.logDir, logFile)) {
+        throw new Error('Unsafe path detected');
+      }
 
       if (!fs.existsSync(logFile)) {
         return [];

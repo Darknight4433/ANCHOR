@@ -321,6 +321,32 @@ class ProcessState extends EventEmitter {
 
     return recovered;
   }
+
+  /**
+   * Remove a process from state
+   * @param {string} name - Process name
+   * @returns {boolean} Success
+   */
+  removeProcess(name) {
+    if (this.state.processes.hasOwnProperty(name)) {
+      delete this.state.processes[name];
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get recovery report
+   * @returns {object} Recovery information
+   */
+  getRecoveryReport() {
+    return {
+      timestamp: new Date().toISOString(),
+      totalProcesses: Object.keys(this.state.processes).length,
+      processes: this.state.processes
+    };
+  }
 }
 
 module.exports = ProcessState;

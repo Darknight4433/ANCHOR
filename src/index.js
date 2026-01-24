@@ -2,16 +2,20 @@ const { EventEmitter } = require('events');
 const { spawn } = require('child_process');
 const path = require('path');
 const Validator = require('./Validator.js');
+const ProcessState = require('./ProcessState.js');
+const LifecycleValidator = require('./LifecycleValidator.js');
 
 /**
- * ProcessManager - Lightweight process management system
- * Handles starting, stopping, restarting processes with PID and uptime tracking
+ * ProcessManager - Production-grade process management system
+ * Handles starting, stopping, restarting processes with PID tracking
+ * Integrates ProcessState for single source of truth and crash recovery
  */
 class ProcessManager extends EventEmitter {
   constructor() {
     super();
-    this.processes = new Map();
+    this.processes = new Map(); // In-memory for active process refs
     this.processCounter = 0;
+    this.state = new ProcessState(); // Single source of truth
   }
 
   /**
@@ -51,6 +55,14 @@ class ProcessManager extends EventEmitter {
     }
 
     try {
+      // Register in ProcessState BEFORE spawning (Principle 2: Lifecycle Order)
+      this.state.registerProcess(name, {
+        command,
+        args,
+        cwd,
+        status: 'registered'
+      });
+
       const childProcess = spawn(command, args, {
         cwd,
         env,
@@ -59,6 +71,10 @@ class ProcessManager extends EventEmitter {
       });
 
       const startTime = Date.now();
+      
+      // Record process start in state (atomic write to disk)
+      this.state.recordProcessStart(name, childProcess.pid);
+      
       const processInfo = {
         name,
         command,
@@ -82,6 +98,8 @@ class ProcessManager extends EventEmitter {
       childProcess.on('exit', (code, signal) => {
         processInfo.status = 'stopped';
         processInfo.exitCode = code;
+        // Record stop in state (atomic write)
+        this.state.recordProcessStop(name, code, signal);
         this.emit('exit', { name, code, signal });
       });
 
@@ -154,13 +172,20 @@ class ProcessManager extends EventEmitter {
       throw new Error(`Process "${name}" not found`);
     }
 
-    const { command, args, cwd, startTime } = processInfo;
+    const { command, args, cwd } = processInfo;
 
     // Stop the existing process
     await this.stop(name);
 
     // Wait a bit before restarting
     await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Check if process is still in state - if so, we need to reset it
+    const stateInfo = this.state.getProcess(name);
+    if (stateInfo && stateInfo.status === 'stopped') {
+      // Remove from state so we can re-register
+      this.state.removeProcess(name);
+    }
 
     // Restart the process
     const newOptions = {
@@ -208,7 +233,7 @@ class ProcessManager extends EventEmitter {
   }
 
   /**
-   * Get all processes
+   * Get all processes (reads from ProcessState for truth)
    * @returns {object[]} Array of process info
    */
   getAllProcesses() {
@@ -220,6 +245,22 @@ class ProcessManager extends EventEmitter {
       }
     }
     return result;
+  }
+
+  /**
+   * Recover state after crash
+   * @returns {object} Recovery report
+   */
+  async recoverAfterCrash() {
+    try {
+      this.state.recoverAfterCrash();
+      const recovery = this.state.getRecoveryReport();
+      this.emit('recovery', recovery);
+      return recovery;
+    } catch (error) {
+      this.emit('error', { error: new Error(`Recovery failed: ${error.message}`) });
+      throw error;
+    }
   }
 
   /**
