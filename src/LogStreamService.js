@@ -127,12 +127,14 @@ class LogStreamService extends EventEmitter {
       const logLine = `[${timestamp}] [${level.toUpperCase()}] ${message}${Object.keys(metadata).length > 0 ? ` ${JSON.stringify(metadata)}` : ''}\n`;
       
       // Wrap with recovery: if write fails, attempt to recover
-      this.recovery.withRecovery(processName, this.getLogFilePath(processName), () => {
-        stream.write(logLine);
-      }).catch(error => {
+      try {
+        this.recovery.withRecovery(processName, this.getLogFilePath(processName), () => {
+          stream.write(logLine);
+        });
+      } catch (error) {
         // Only emit if recovery completely failed
         this.emit('error', { processName, error, action: 'write-recovery-failed' });
-      });
+      }
     }
 
     this.emit('log', { processName, logEntry });

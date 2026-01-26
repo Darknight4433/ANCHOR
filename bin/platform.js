@@ -138,34 +138,38 @@ class GameServerPlatform {
    * Initialize platform
    */
   async initialize() {
-    console.log('🚀 Initializing Game Server Platform...\n');
+    try {
+      console.log('🚀 Initializing Game Server Platform...\n');
 
-    // Validate config
-    const validation = this.configManager.validate();
-    if (!validation.valid) {
-      console.error('❌ Configuration invalid:');
-      validation.errors.forEach(err => console.error(`  - ${err}`));
-      process.exit(1);
+      // Validate config
+      const validation = this.configManager.validate();
+      if (!validation.valid) {
+        console.error('❌ Configuration invalid:');
+        validation.errors.forEach(err => console.error(`  - ${err}`));
+        throw new Error('Configuration validation failed');
+      }
+
+      // Start logging service
+      this.logs.startLogging('platform', { persist: true });
+      this.logs.write('platform', 'Game Server Platform starting', 'info');
+
+      // Check Docker availability
+      const dockerAvailable = await this.docker.isDockerAvailable();
+      if (dockerAvailable) {
+        console.log('✓ Docker is available');
+        this.logs.write('platform', 'Docker is available', 'info');
+      } else {
+        console.log('⚠ Docker is not available (native process mode only)');
+        this.logs.write('platform', 'Docker is not available', 'warn');
+      }
+
+      // Setup web server
+      this.setupWebServer();
+
+      return true;
+    } catch (error) {
+      throw error;
     }
-
-    // Start logging service
-    this.logs.startLogging('platform', { persist: true });
-    this.logs.write('platform', 'Game Server Platform starting', 'info');
-
-    // Check Docker availability
-    const dockerAvailable = await this.docker.isDockerAvailable();
-    if (dockerAvailable) {
-      console.log('✓ Docker is available');
-      this.logs.write('platform', 'Docker is available', 'info');
-    } else {
-      console.log('⚠ Docker is not available (native process mode only)');
-      this.logs.write('platform', 'Docker is not available', 'warn');
-    }
-
-    // Setup web server
-    this.setupWebServer();
-
-    return true;
   }
 
   /**
@@ -173,12 +177,18 @@ class GameServerPlatform {
    */
   async start() {
     try {
-      if (!(await this.initialize())) {
+      console.log('Calling initialize...');
+      const initialized = await this.initialize();
+      console.log('Initialize returned:', initialized);
+      
+      if (!initialized) {
         throw new Error('Platform initialization failed');
       }
 
       // Start API server
-      await this.api.start();
+      console.log('Starting API server...');
+      const apiResult = await this.api.start();
+      console.log('API server started');
 
       console.log(`
 ✅ Platform Started Successfully!
@@ -263,8 +273,15 @@ if (require.main === module) {
   const configPath = process.argv[2];
   const platform = new GameServerPlatform(configPath);
 
-  platform.start().catch((error) => {
+  const startPromise = platform.start();
+  if (!startPromise) {
+    console.error('❌ Platform.start() returned undefined');
+    process.exit(1);
+  }
+  
+  startPromise.catch((error) => {
     console.error('Fatal error:', error.message);
+    console.error('Stack:', error.stack);
     process.exit(1);
   });
 
