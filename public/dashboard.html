@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Process Manager Panel - Game Server Dashboard</title>
+    <title>ANCHOR - Cloud Infrastructure Platform</title>
     <style>
         * {
             margin: 0;
@@ -13,8 +13,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: #333;
+            background: #0a0a0a;
+            color: #e0e0e0;
             min-height: 100vh;
         }
 
@@ -25,19 +25,20 @@
         }
 
         header {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(30, 30, 30, 0.95);
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border: 1px solid #333;
         }
 
         h1 {
             font-size: 28px;
-            color: #2a5298;
+            color: #00d4ff;
         }
 
         .auth-info {
@@ -47,16 +48,16 @@
         }
 
         .user-badge {
-            background: #2a5298;
-            color: white;
+            background: #00d4ff;
+            color: #0a0a0a;
             padding: 8px 16px;
             border-radius: 20px;
             font-size: 14px;
         }
 
         button {
-            background: #2a5298;
-            color: white;
+            background: #00d4ff;
+            color: #0a0a0a;
             border: none;
             padding: 10px 20px;
             border-radius: 4px;
@@ -66,7 +67,7 @@
         }
 
         button:hover {
-            background: #1e3c72;
+            background: #0099cc;
         }
 
         button.secondary {
@@ -93,29 +94,31 @@
         }
 
         .stat-card {
-            background: white;
+            background: rgba(30, 30, 30, 0.95);
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
         }
 
         .stat-value {
             font-size: 32px;
             font-weight: bold;
-            color: #2a5298;
+            color: #00d4ff;
             margin: 10px 0;
         }
 
         .stat-label {
-            color: #666;
+            color: #ccc;
             font-size: 14px;
         }
 
         .servers-section {
-            background: white;
+            background: rgba(30, 30, 30, 0.95);
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
         }
 
         .section-header {
@@ -124,12 +127,12 @@
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
+            border-bottom: 2px solid #333;
         }
 
         .section-header h2 {
             font-size: 20px;
-            color: #333;
+            color: #e0e0e0;
         }
 
         .create-server {
@@ -141,16 +144,20 @@
         .create-server input {
             flex: 1;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #555;
             border-radius: 4px;
             font-size: 14px;
+            background: #333;
+            color: #e0e0e0;
         }
 
         .create-server select {
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #555;
             border-radius: 4px;
             font-size: 14px;
+            background: #333;
+            color: #e0e0e0;
         }
 
         .server-list {
@@ -160,10 +167,10 @@
         }
 
         .server-card {
-            border: 1px solid #ddd;
+            border: 1px solid #333;
             border-radius: 8px;
             padding: 15px;
-            background: #f9f9f9;
+            background: #1e1e1e;
         }
 
         .server-header {
@@ -176,7 +183,7 @@
         .server-name {
             font-size: 18px;
             font-weight: bold;
-            color: #333;
+            color: #e0e0e0;
         }
 
         .server-status {
@@ -188,23 +195,23 @@
         }
 
         .status-running {
-            background: #d4edda;
-            color: #155724;
+            background: #28a745;
+            color: #fff;
         }
 
         .status-stopped {
-            background: #f8d7da;
-            color: #721c24;
+            background: #dc3545;
+            color: #fff;
         }
 
         .status-error {
-            background: #f5c6cb;
-            color: #721c24;
+            background: #dc3545;
+            color: #fff;
         }
 
         .server-info {
             font-size: 13px;
-            color: #666;
+            color: #ccc;
             margin: 10px 0;
             line-height: 1.6;
         }
@@ -224,10 +231,11 @@
         }
 
         .logs-section {
-            background: white;
+            background: rgba(30, 30, 30, 0.95);
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
             margin-top: 20px;
         }
 
@@ -265,16 +273,17 @@
         }
 
         .status-bar {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(30, 30, 30, 0.95);
             padding: 15px 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
             margin-top: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 13px;
-            color: #666;
+            color: #ccc;
         }
 
         .status-indicator {
@@ -294,19 +303,167 @@
             background: #f44336;
         }
 
-        @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
+        .waiting-logs {
+            color: #666;
+        }
 
-            .server-list {
-                grid-template-columns: 1fr;
-            }
+        .no-servers {
+            grid-column: 1/-1;
+            color: #999;
+        }
 
-            header {
-                flex-direction: column;
-                gap: 15px;
-            }
+        .subtitle {
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .plugins-section {
+            background: rgba(30, 30, 30, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+            margin-top: 20px;
+        }
+
+        .plugin-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 15px;
+        }
+
+        .plugin-card {
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            background: #1e1e1e;
+        }
+
+        .plugin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .plugin-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+
+        .plugin-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-installed {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .status-available {
+            background: #007bff;
+            color: #fff;
+        }
+
+        .plugin-info {
+            font-size: 13px;
+            color: #ccc;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .plugin-meta {
+            font-size: 12px;
+            color: #888;
+            margin: 8px 0;
+        }
+
+        .plugin-capabilities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        .capability-tag {
+            background: #333;
+            color: #ccc;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .plugin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tab-button {
+            background: #333;
+            color: #ccc;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .tab-button:hover {
+            background: #555;
+        }
+
+        .plugin-search {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .plugin-search input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+
+        .plugin-search select {
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+
+        .plugin-list-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 15px;
+        }
+
+        .plugin-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .plugin-actions button {
+            flex: 1;
+            min-width: 80px;
+            padding: 8px 12px;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -314,8 +471,8 @@
     <div class="container">
         <header>
             <div>
-                <h1>🎮 Game Server Panel</h1>
-                <p style="color: #666; font-size: 14px;">Process Manager Dashboard</p>
+                <h1>⚓ ANCHOR - Cloud Infrastructure Platform</h1>
+                <p class="subtitle">Universal Orchestration for Web Apps, APIs, AI, and Game Servers</p>
             </div>
             <div class="auth-info">
                 <div class="user-badge" id="userBadge">User: admin</div>
@@ -329,30 +486,40 @@
                 <div class="stat-value" id="activeServersCount">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Total Processes</div>
+                <div class="stat-label">Web Apps</div>
+                <div class="stat-value" id="activeAppsCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">API Services</div>
+                <div class="stat-value" id="activeServicesCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Workloads</div>
                 <div class="stat-value" id="totalProcessesCount">0</div>
             </div>
         </div>
 
         <div class="servers-section">
             <div class="section-header">
-                <h2>Managed Servers</h2>
+                <h2>Deployed Workloads</h2>
             </div>
 
             <div class="create-server">
-                <input type="text" id="serverName" placeholder="Server name">
-                <select id="serverType">
-                    <option value="">Select Server Type</option>
-                    <option value="minecraft">Minecraft</option>
-                    <option value="csgo">CS:GO</option>
-                    <option value="rust">Rust</option>
-                    <option value="valheim">Valheim</option>
+                <select id="workloadType" name="workloadType" aria-label="Workload Type">
+                    <option value="">Select Workload Type</option>
+                    <option value="web">🌐 Web App</option>
+                    <option value="service">📦 API Service</option>
+                    <option value="job">📊 Batch Job</option>
+                    <option value="ai">🧠 AI Model</option>
+                    <option value="game">🎮 Game Server</option>
                 </select>
-                <button onclick="createServer()">Create Server</button>
+                <input type="text" id="workloadName" placeholder="Workload name">
+                <input type="text" id="workloadImage" placeholder="Docker image (optional)">
+                <button onclick="deployWorkload()">Deploy</button>
             </div>
 
             <div class="server-list" id="serverList">
-                <p style="grid-column: 1/-1; color: #999;">No servers yet</p>
+                <p class="no-servers">No workloads yet</p>
             </div>
         </div>
 
@@ -361,12 +528,40 @@
                 <h2>Live Logs</h2>
             </div>
             <div class="logs-container" id="logsContainer">
-                <p style="color: #666;">Waiting for log entries...</p>
+                <p class="waiting-logs">Waiting for log entries...</p>
+            </div>
+        </div>
+
+        <div class="plugins-section">
+            <div class="section-header">
+                <h2>🔌 Plugin Marketplace</h2>
+                <div class="plugin-tabs">
+                    <button class="tab-button active" onclick="switchPluginTab('local')">Local Plugins</button>
+                    <button class="tab-button" onclick="switchPluginTab('remote')">Remote Registry</button>
+                </div>
+            </div>
+            <div class="plugin-list" id="pluginList">
+                <p class="no-plugins">Loading plugins...</p>
+            </div>
+            <div class="plugin-list" id="remotePluginList" style="display: none;">
+                <div class="plugin-search">
+                    <input type="text" id="pluginSearch" placeholder="Search plugins..." onkeyup="searchRemotePlugins()">
+                    <select id="pluginCategory" onchange="searchRemotePlugins()">
+                        <option value="">All Categories</option>
+                        <option value="infrastructure">Infrastructure</option>
+                        <option value="security">Security</option>
+                        <option value="monitoring">Monitoring</option>
+                        <option value="database">Database</option>
+                        <option value="networking">Networking</option>
+                        <option value="ai">AI/ML</option>
+                    </select>
+                </div>
+                <p class="no-plugins">Loading remote plugins...</p>
             </div>
         </div>
 
         <div class="status-bar">
-            <span>© 2026 Process Manager - Game Server Platform</span>
+            <span>© 2026 ANCHOR Cloud Platform - Universal Infrastructure Orchestration</span>
             <div class="status-indicator">
                 <span>API Status:</span>
                 <div class="indicator-dot" id="apiStatus"></div>
@@ -439,14 +634,14 @@
             }
         }
 
-        // Load servers from API
+        // Load workloads from API
         async function loadServers() {
             try {
                 const response = await fetch(`${API_URL}/servers`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                if (!response.ok) throw new Error('Failed to load servers');
+                if (!response.ok) throw new Error('Failed to load workloads');
 
                 const data = await response.json();
                 displayServers(data.servers);
@@ -454,36 +649,43 @@
                 // Update stats
                 const running = data.servers.filter(s => s.status === 'running').length;
                 document.getElementById('activeServersCount').textContent = running;
+                document.getElementById('activeAppsCount').textContent = data.servers.filter(s => s.type === 'web').length;
+                document.getElementById('activeServicesCount').textContent = data.servers.filter(s => s.type === 'service').length;
                 document.getElementById('totalProcessesCount').textContent = data.servers.length;
             } catch (error) {
-                console.error('Error loading servers:', error);
+                console.error('Error loading workloads:', error);
             }
         }
 
-        // Display servers
+        // Display workloads
         function displayServers(servers) {
             const list = document.getElementById('serverList');
 
             if (servers.length === 0) {
-                list.innerHTML = '<p style="grid-column: 1/-1; color: #999;">No servers yet</p>';
+                list.innerHTML = '<p style="grid-column: 1/-1; color: #999;">No workloads yet</p>';
                 return;
             }
 
-            list.innerHTML = servers.map(server => `
+            list.innerHTML = servers.map(server => {
+                const typeIcon = getTypeIcon(server.type);
+                const typeLabel = getTypeLabel(server.type);
+
+                return `
                 <div class="server-card">
                     <div class="server-header">
-                        <div class="server-name">${server.name}</div>
+                        <div class="server-name">${typeIcon} ${server.name}</div>
                         <div class="server-status status-${server.status}">${server.status.toUpperCase()}</div>
                     </div>
                     <div class="server-info">
-                        <strong>Type:</strong> ${server.type}<br>
-                        <strong>Runtime:</strong> ${server.runtime}<br>
+                        <strong>Type:</strong> ${typeLabel}<br>
+                        <strong>Runtime:</strong> ${server.runtime || 'Docker'}<br>
                         <strong>PID:</strong> ${server.pid || 'N/A'}<br>
                         <strong>Uptime:</strong> ${formatUptime(server.uptime || 0)}<br>
                         <strong>Created:</strong> ${new Date(server.createdAt).toLocaleString()}
+                        ${server.domain ? `<br><strong>Domain:</strong> ${server.domain}` : ''}
                     </div>
                     <div class="server-actions">
-                        ${server.status === 'running' 
+                        ${server.status === 'running'
                             ? `
                                 <button onclick="stopServer('${server.name}')">Stop</button>
                                 <button onclick="restartServer('${server.name}')">Restart</button>
@@ -496,7 +698,31 @@
                         <button onclick="viewLogs('${server.name}')">Logs</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
+        }
+
+        // Get icon for workload type
+        function getTypeIcon(type) {
+            switch (type) {
+                case 'web': return '🌐';
+                case 'service': return '📦';
+                case 'job': return '📊';
+                case 'ai': return '🧠';
+                case 'game': return '🎮';
+                default: return '⚙️';
+            }
+        }
+
+        // Get label for workload type
+        function getTypeLabel(type) {
+            switch (type) {
+                case 'web': return 'Web App';
+                case 'service': return 'API Service';
+                case 'job': return 'Batch Job';
+                case 'ai': return 'AI Model';
+                case 'game': return 'Game Server';
+                default: return type;
+            }
         }
 
         // Format uptime
@@ -511,37 +737,44 @@
             return `${seconds}s`;
         }
 
-        // Create server
-        async function createServer() {
-            const name = document.getElementById('serverName').value;
-            const type = document.getElementById('serverType').value;
+        // Deploy workload
+        async function deployWorkload() {
+            const type = document.getElementById('workloadType').value;
+            const name = document.getElementById('workloadName').value;
+            const image = document.getElementById('workloadImage').value;
 
-            if (!name || !type) {
-                alert('Please fill in all fields');
+            if (!type || !name) {
+                alert('Please fill in workload type and name');
                 return;
             }
 
             try {
-                const response = await fetch(`${API_URL}/servers`, {
+                const response = await fetch(`${API_URL}/deploy`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ name, type, options: {} })
+                    body: JSON.stringify({
+                        type,
+                        name,
+                        image: image || undefined,
+                        region: 'us-east' // Default region
+                    })
                 });
 
-                if (!response.ok) throw new Error('Failed to create server');
+                if (!response.ok) throw new Error('Failed to deploy workload');
 
-                document.getElementById('serverName').value = '';
-                document.getElementById('serverType').value = '';
+                document.getElementById('workloadType').value = '';
+                document.getElementById('workloadName').value = '';
+                document.getElementById('workloadImage').value = '';
                 loadServers();
             } catch (error) {
                 alert('Error: ' + error.message);
             }
         }
 
-        // Start server
+        // Start workload
         async function startServer(name, type) {
             try {
                 const response = await fetch(`${API_URL}/servers/${name}/start`, {
@@ -553,7 +786,7 @@
                     body: JSON.stringify({ type, options: {} })
                 });
 
-                if (!response.ok) throw new Error('Failed to start server');
+                if (!response.ok) throw new Error('Failed to start workload');
                 loadServers();
             } catch (error) {
                 alert('Error: ' + error.message);
@@ -674,12 +907,288 @@
             window.location.href = 'login.html';
         }
 
+        // Load plugins from marketplace
+        async function loadPlugins() {
+            try {
+                const response = await fetch(`${API_URL}/plugins/marketplace`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load plugins');
+
+                const data = await response.json();
+                displayPlugins(data.plugins);
+            } catch (error) {
+                console.error('Error loading plugins:', error);
+                document.getElementById('pluginList').innerHTML = '<p style="color: #999;">Failed to load plugins</p>';
+            }
+        }
+
+        // Display plugins
+        function displayPlugins(plugins) {
+            const list = document.getElementById('pluginList');
+
+            if (plugins.length === 0) {
+                list.innerHTML = '<p style="color: #999;">No plugins available</p>';
+                return;
+            }
+
+            list.innerHTML = plugins.map(plugin => `
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <div class="plugin-name">${plugin.name}</div>
+                        <div class="plugin-status status-${plugin.installed ? 'installed' : 'available'}">
+                            ${plugin.installed ? 'INSTALLED' : 'AVAILABLE'}
+                        </div>
+                    </div>
+                    <div class="plugin-info">${plugin.description}</div>
+                    <div class="plugin-meta">
+                        <strong>Version:</strong> ${plugin.version} |
+                        <strong>Author:</strong> ${plugin.author} |
+                        <strong>Category:</strong> ${plugin.category}
+                    </div>
+                    <div class="plugin-capabilities">
+                        ${plugin.capabilities.map(cap => `<span class="capability-tag">${cap.replace('-', ' ')}</span>`).join('')}
+                    </div>
+                    <div class="plugin-actions">
+                        ${plugin.installed
+                            ? `
+                                <button onclick="configurePlugin('${plugin.id}')">Configure</button>
+                                <button class="danger" onclick="uninstallPlugin('${plugin.id}')">Uninstall</button>
+                            `
+                            : `
+                                <button onclick="installPlugin('${plugin.id}')">Install</button>
+                            `
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Install plugin
+        async function installPlugin(pluginId) {
+            if (!confirm(`Install plugin "${pluginId}"?`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/plugins/marketplace/${pluginId}/install`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to install plugin');
+
+                alert('Plugin installed successfully!');
+                loadPlugins();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Uninstall plugin
+        async function uninstallPlugin(pluginId) {
+            if (!confirm(`Uninstall plugin "${pluginId}"? This may affect running services.`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/plugins/marketplace/${pluginId}/uninstall`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to uninstall plugin');
+
+                alert('Plugin uninstalled successfully!');
+                loadPlugins();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Configure plugin
+        async function configurePlugin(pluginId) {
+            try {
+                const response = await fetch(`${API_URL}/plugins/marketplace/${pluginId}/config`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load plugin config');
+
+                const data = await response.json();
+
+                // Simple configuration modal (in a real app, this would be a proper modal)
+                const configStr = JSON.stringify(data.config, null, 2);
+                const newConfigStr = prompt(`Configure ${pluginId} (JSON format):`, configStr);
+
+                if (newConfigStr && newConfigStr !== configStr) {
+                    const newConfig = JSON.parse(newConfigStr);
+
+                    const updateResponse = await fetch(`${API_URL}/plugins/marketplace/${pluginId}/config`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ config: newConfig })
+                    });
+
+                    if (!updateResponse.ok) throw new Error('Failed to update config');
+
+                    alert('Plugin configuration updated!');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
         // Initialize
         connectWebSocket();
         loadServers();
+        loadPlugins();
+        loadRemotePlugins();
 
         // Refresh servers every 5 seconds
         setInterval(loadServers, 5000);
-    </script>
+
+        // Refresh plugins every 30 seconds
+        setInterval(loadPlugins, 30000);
+
+        // Switch plugin tabs
+        function switchPluginTab(tab) {
+            const localTab = document.querySelector('.tab-button:nth-child(1)');
+            const remoteTab = document.querySelector('.tab-button:nth-child(2)');
+            const localList = document.getElementById('pluginList');
+            const remoteList = document.getElementById('remotePluginList');
+
+            if (tab === 'local') {
+                localTab.classList.add('active');
+                remoteTab.classList.remove('active');
+                localList.style.display = 'grid';
+                remoteList.style.display = 'none';
+            } else {
+                localTab.classList.remove('active');
+                remoteTab.classList.add('active');
+                localList.style.display = 'none';
+                remoteList.style.display = 'grid';
+            }
+        }
+
+        // Load remote plugins from registry
+        async function loadRemotePlugins() {
+            try {
+                const response = await fetch(`${API_URL}/plugins/registry`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load remote plugins');
+
+                const data = await response.json();
+                displayRemotePlugins(data.plugins);
+            } catch (error) {
+                console.error('Error loading remote plugins:', error);
+                document.getElementById('remotePluginList').innerHTML = '<p style="color: #999;">Failed to load remote plugins</p>';
+            }
+        }
+
+        // Display remote plugins
+        function displayRemotePlugins(plugins) {
+            const container = document.getElementById('remotePluginList');
+            const searchContainer = container.querySelector('.plugin-search');
+
+            if (plugins.length === 0) {
+                container.innerHTML = '<p style="color: #999;">No remote plugins available</p>';
+                return;
+            }
+
+            // Keep the search bar
+            const searchHtml = searchContainer ? searchContainer.outerHTML : '';
+
+            container.innerHTML = `
+                ${searchHtml}
+                <div class="plugin-list-grid">
+                    ${plugins.map(plugin => `
+                        <div class="plugin-card">
+                            <div class="plugin-header">
+                                <div class="plugin-name">${plugin.name}</div>
+                                <div class="plugin-status status-${plugin.installed ? 'installed' : 'available'}">
+                                    ${plugin.installed ? 'INSTALLED' : 'REMOTE'}
+                                </div>
+                            </div>
+                            <div class="plugin-info">${plugin.description}</div>
+                            <div class="plugin-meta">
+                                <strong>Version:</strong> ${plugin.version} |
+                                <strong>Author:</strong> ${plugin.author} |
+                                <strong>Category:</strong> ${plugin.category}
+                            </div>
+                            <div class="plugin-capabilities">
+                                ${plugin.capabilities ? plugin.capabilities.map(cap => `<span class="capability-tag">${cap.replace('-', ' ')}</span>`).join('') : ''}
+                            </div>
+                            <div class="plugin-actions">
+                                ${plugin.installed
+                                    ? `<button class="danger" onclick="uninstallRemotePlugin('${plugin.id}')">Uninstall</button>`
+                                    : `<button onclick="installRemotePlugin('${plugin.id}')">Install from Registry</button>`
+                                }
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Install remote plugin
+        async function installRemotePlugin(pluginId) {
+            if (!confirm(`Install remote plugin "${pluginId}"? This will download and install the plugin.`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/plugins/registry/${pluginId}/install`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to install remote plugin');
+
+                alert('Remote plugin installed successfully!');
+                loadRemotePlugins();
+                loadPlugins(); // Refresh local plugins too
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Uninstall remote plugin
+        async function uninstallRemotePlugin(pluginId) {
+            if (!confirm(`Uninstall remote plugin "${pluginId}"? This may affect running services.`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/plugins/marketplace/${pluginId}/uninstall`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to uninstall remote plugin');
+
+                alert('Remote plugin uninstalled successfully!');
+                loadRemotePlugins();
+                loadPlugins(); // Refresh local plugins too
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Search remote plugins
+        function searchRemotePlugins() {
+            const searchTerm = document.getElementById('pluginSearch').value.toLowerCase();
+            const category = document.getElementById('pluginCategory').value;
+            const cards = document.querySelectorAll('#remotePluginList .plugin-card');
+
+            cards.forEach(card => {
+                const name = card.querySelector('.plugin-name').textContent.toLowerCase();
+                const description = card.querySelector('.plugin-info').textContent.toLowerCase();
+                const pluginCategory = card.querySelector('.plugin-meta').textContent.toLowerCase();
+
+                const matchesSearch = !searchTerm || name.includes(searchTerm) || description.includes(searchTerm);
+                const matchesCategory = !category || pluginCategory.includes(category.toLowerCase());
+
+                card.style.display = matchesSearch && matchesCategory ? 'block' : 'none';
+            });
+        }
 </body>
 </html>

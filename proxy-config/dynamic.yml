@@ -1,0 +1,10 @@
+{
+  "http": {
+    "routers": {},
+    "services": {},
+    "middlewares": {}
+  },
+  "tls": {
+    "certificates": []
+  }
+}

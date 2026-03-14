@@ -1,0 +1,10 @@
+{
+  "name": "anchor-monitoring-stack",
+  "version": "1.0.0",
+  "description": "Complete observability solution with Prometheus metrics, Grafana dashboards, and alerting",
+  "main": "index.js",
+  "dependencies": {
+    "prometheus-api-metrics": "^3.2.2",
+    "express": "^4.18.0"
+  }
+}

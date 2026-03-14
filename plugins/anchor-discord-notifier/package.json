@@ -1,0 +1,11 @@
+{
+  "name": "anchor-discord-notifier",
+  "version": "1.0.0",
+  "description": "Discord notification plugin for ANCHOR",
+  "main": "index.js",
+  "author": "ANCHOR Community",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.11.0"
+  }
+}

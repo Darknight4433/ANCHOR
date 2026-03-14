@@ -2,14 +2,13 @@
 
 const net = require('net');
 const fs = require('fs');
-const path = require('path');
 const ProcessManager = require('../src/index.js');
 const PersistenceManager = require('../src/PersistenceManager.js');
 const ConfigManager = require('../src/ConfigManager.js');
 
 /**
  * Daemon Service - Runs as a background service
- */
+ */  
 class DaemonService {
   constructor(configPath = null) {
     this.configManager = new ConfigManager(configPath);
@@ -218,10 +217,11 @@ class DaemonService {
 
     try {
       switch (action) {
-        case 'start':
+        case 'start': {
           if (!name || !args) throw new Error('Missing required fields: name, args');
           const startInfo = this.pm.start(args[0], args.slice(1), { name, ...options });
           return { success: true, data: startInfo };
+        }
 
         case 'stop':
           if (!name) throw new Error('Missing required field: name');
@@ -234,15 +234,17 @@ class DaemonService {
         case 'list':
           return { success: true, data: this.pm.getAllProcesses() };
 
-        case 'info':
+        case 'info': {
           if (!name) throw new Error('Missing required field: name');
           const info = this.pm.getProcessInfo(name);
           if (!info) throw new Error(`Process not found: ${name}`);
           return { success: true, data: info };
+        }
 
-        case 'status':
+        case 'status': {
           const stats = this.persistenceManager.getStats();
           return { success: true, data: { ...stats, processes: this.pm.getAllProcesses() } };
+        }
 
         default:
           throw new Error(`Unknown action: ${action}`);

@@ -1,0 +1,13 @@
+{
+  "name": "anchor-registry-client",
+  "version": "1.0.0",
+  "description": "Remote plugin registry client for ANCHOR - enables downloading plugins from remote registries",
+  "main": "index.js",
+  "author": "ANCHOR Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "tar": "^6.2.0",
+    "fs-extra": "^11.2.0"
+  }
+}

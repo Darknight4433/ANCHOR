@@ -193,18 +193,14 @@ class DockerAdapter extends EventEmitter {
   async getContainerLogs(containerId, options = {}) {
     const { tail = 100, follow = false } = options;
 
-    try {
-      const cmd = `docker logs --tail ${tail}${follow ? ' -f' : ''} ${containerId}`;
-      
-      if (!follow) {
-        const { stdout } = await execAsync(cmd);
-        return stdout;
-      } else {
-        // Return stream for follow mode
-        return spawn('docker', ['logs', '--tail', tail.toString(), '-f', containerId]);
-      }
-    } catch (error) {
-      throw error;
+    const cmd = `docker logs --tail ${tail}${follow ? ' -f' : ''} ${containerId}`;
+    
+    if (!follow) {
+      const { stdout } = await execAsync(cmd);
+      return stdout;
+    } else {
+      // Return stream for follow mode
+      return spawn('docker', ['logs', '--tail', tail.toString(), '-f', containerId]);
     }
   }
 
@@ -212,12 +208,8 @@ class DockerAdapter extends EventEmitter {
    * Execute command in container
    */
   async execInContainer(containerId, command) {
-    try {
-      const { stdout, stderr } = await execAsync(`docker exec ${containerId} ${command}`);
-      return { stdout, stderr };
-    } catch (error) {
-      throw error;
-    }
+    const { stdout, stderr } = await execAsync(`docker exec ${containerId} ${command}`);
+    return { stdout, stderr };
   }
 
   /**
@@ -239,28 +231,20 @@ class DockerAdapter extends EventEmitter {
    * Remove a container
    */
   async removeContainer(containerId, force = false) {
-    try {
-      const forceFlag = force ? ' -f' : '';
-      await execAsync(`docker rm${forceFlag} ${containerId}`);
-      
-      this.containers.delete(containerId);
-      this.emit('remove', { id: containerId });
-      return true;
-    } catch (error) {
-      throw error;
-    }
+    const forceFlag = force ? ' -f' : '';
+    await execAsync(`docker rm${forceFlag} ${containerId}`);
+    
+    this.containers.delete(containerId);
+    this.emit('remove', { id: containerId });
+    return true;
   }
 
   /**
    * Pull image from registry
    */
   async pullImage(image) {
-    try {
-      await execAsync(`docker pull ${image}`);
-      return true;
-    } catch (error) {
-      throw error;
-    }
+    await execAsync(`docker pull ${image}`);
+    return true;
   }
 
   /**

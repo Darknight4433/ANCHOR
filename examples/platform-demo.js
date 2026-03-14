@@ -2,7 +2,6 @@ const ProcessManager = require('../src/index.js');
 const GameServerManager = require('../src/GameServerManager.js');
 const DockerAdapter = require('../src/DockerAdapter.js');
 const LogStreamService = require('../src/LogStreamService.js');
-const APIServer = require('../src/APIServer.js');
 
 /**
  * Platform Demo - Comprehensive showcase of Game Server Platform
@@ -24,7 +23,6 @@ async function runDemo() {
   const docker = new DockerAdapter();
   const logs = new LogStreamService();
   const gameServers = new GameServerManager(pm, docker);
-  const api = new APIServer({ port: 3000 });
 
   console.log('✓ Services initialized\n');
 
@@ -88,9 +86,10 @@ async function runDemo() {
 
   const retrievedLogs = logs.getLogs('test-process', 100);
   console.log(`Retrieved ${retrievedLogs.length} log entries:`);
-  retrievedLogs.slice(-5).forEach((log, idx) => {
-    const icon = log.level === 'error' ? '❌' : log.level === 'warn' ? '⚠️' : 'ℹ️';
-    console.log(`  ${icon} [${log.level}] ${log.message}`);
+  // eslint-disable-next-line no-unused-vars
+  retrievedLogs.slice(-5).forEach((_log, _) => {
+    const icon = _log.level === 'error' ? '❌' : _log.level === 'warn' ? '⚠️' : 'ℹ️';
+    console.log(`  ${icon} [${_log.level}] ${_log.message}`);
   });
   console.log();
 

@@ -40,3 +40,11 @@ environment:
   NODE_ENV: production
   # Add more environment variables as needed
   # LOG_LEVEL: debug
+ jwtSecret: test-secret 
+ corsOrigin: *  
+ port: 3333 
+ host: localhost
+ enableSocket: true
+ logLevel: info
+ adminUsername: admin_test
+ adminPasswordHash: $2a$10$wT.fG6jS6xP7X/b/rL2oDO8t.Fk6gK1Cj/Y.hK/I1F8VvB1zV9s.u

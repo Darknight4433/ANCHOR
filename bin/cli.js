@@ -6,12 +6,8 @@ const DaemonClient = require('./daemon-client.js');
 const PersistenceManager = require('../src/PersistenceManager.js');
 const ConfigManager = require('../src/ConfigManager.js');
 const readline = require('readline');
-const fs = require('fs');
-const path = require('path');
 
 let pm = new ProcessManager();
-let useDaemon = false;
-let daemonClient = null;
 
 // Event listeners
 pm.on('start', ({ name, pid }) => console.log(`✓ Started: ${name} (PID: ${pid})`));

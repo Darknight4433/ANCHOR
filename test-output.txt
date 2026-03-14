@@ -1,0 +1,47 @@
+﻿node.exe : FAIL test/api.test.js
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL test/api.tes 
+   t.js:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  API Server (Auth)
+    ΓêÜ GET /health should return 200 ok (24 ms)
+    ├ù POST /api/auth/login should issue token on correct 
+credentials (81 ms)
+    ΓêÜ POST /api/auth/login should reject bad password (65 ms)
+    ΓêÜ GET /api/servers unprotected should return 401 (4 ms)
+    ΓêÜ GET /api/servers with token should return 200 (7 ms)
+
+  ΓùÅ API Server (Auth) ΓÇ║ POST /api/auth/login should issue 
+token on correct credentials
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: 200
+    Received: 401
+
+    [0m [90m 42 |[39m       [33m.[39msend({ 
+username[33m:[39m [32m'admin_test'[39m[33m,[39m 
+password[33m:[39m [32m'admin'[39m })[33m;[39m
+     [90m 43 |[39m       
+    [31m[1m>[22m[39m[90m 44 |[39m     expect(res[33m.[3
+9mstatusCode)[33m.[39mtoEqual([35m200[39m)[33m;[39m
+     [90m    |[39m                            
+[31m[1m^[22m[39m
+     [90m 45 |[39m     expect(res[33m.[39mbody[33m.[39msu
+ccess)[33m.[39mtoEqual([36mtrue[39m)[33m;[39m
+     [90m 46 |[39m     expect(res[33m.[39mbody[33m.[39mto
+ken)[33m.[39mtoBeDefined()[33m;[39m
+     [90m 47 |[39m   })[33m;[39m[0m
+
+      at Object.toEqual (test/api.test.js:44:28)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        0.738 s, estimated 1 s
+Ran all test suites matching test/api.test.js.

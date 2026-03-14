@@ -1,4 +1,3 @@
-const DaemonService = require('../bin/daemon.js');
 const PersistenceManager = require('../src/PersistenceManager.js');
 const ConfigManager = require('../src/ConfigManager.js');
 

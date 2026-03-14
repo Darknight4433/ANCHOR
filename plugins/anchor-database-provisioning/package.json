@@ -1,0 +1,11 @@
+{
+  "name": "anchor-database-provisioning",
+  "version": "1.0.0",
+  "description": "Database provisioning plugin for ANCHOR - auto-provision PostgreSQL, Redis, and MongoDB",
+  "main": "index.js",
+  "author": "ANCHOR Team",
+  "license": "MIT",
+  "dependencies": {
+    "dockerode": "^4.0.0"
+  }
+}

@@ -1,6 +1,7 @@
 const EventEmitter = require('events');
 const DockerAdapter = require('./DockerAdapter.js');
 const Validator = require('./Validator.js');
+const GameServerTemplates = require('./GameServerTemplates.js');
 
 /**
  * GameServerManager - Specialized manager for game servers
@@ -13,6 +14,23 @@ class GameServerManager extends EventEmitter {
     this.docker = dockerAdapter || new DockerAdapter();
     this.servers = new Map();
     this.logStreams = new Map();
+    
+    // Load built-in game server templates
+    this.serverTypes = new Map();
+    const availableGames = GameServerTemplates.getAvailableGames();
+    availableGames.forEach(game => {
+      const template = GameServerTemplates.getTemplate(game);
+      if (template) {
+        this.defineServerType(game, {
+          docker: template.image,
+          ports: template.ports,
+          env: template.env,
+          memory: template.resources.memory,
+          cpus: template.resources.cpus,
+          volumes: template.volumes
+        });
+      }
+    });
   }
 
   /**
@@ -265,18 +283,14 @@ class GameServerManager extends EventEmitter {
    * Get server logs
    */
   async getLogs(name, limit = 50) {
-    try {
-      const server = this.servers.get(name);
-      if (!server) throw new Error(`Server not found: ${name}`);
+    const server = this.servers.get(name);
+    if (!server) throw new Error(`Server not found: ${name}`);
 
-      if (server.runtime === 'docker' && server.containerId) {
-        const logs = await this.docker.getContainerLogs(server.containerId, { tail: limit });
-        return logs;
-      } else {
-        return server.logs.slice(-limit);
-      }
-    } catch (error) {
-      throw error;
+    if (server.runtime === 'docker' && server.containerId) {
+      const logs = await this.docker.getContainerLogs(server.containerId, { tail: limit });
+      return logs;
+    } else {
+      return server.logs.slice(-limit);
     }
   }
 
@@ -357,6 +371,39 @@ class GameServerManager extends EventEmitter {
     } catch (error) {
       this.emit('error', { error, action: 'delete', name });
       throw error;
+    }
+  }
+
+  /**
+   * Get server statistics (CPU, memory usage, etc.)
+   */
+  async getServerStats(name) {
+    try {
+      const server = this.servers.get(name);
+      if (!server) throw new Error(`Server not found: ${name}`);
+
+      if (server.runtime === 'docker' && server.containerId) {
+        const stats = await this.docker.getContainerStats(server.containerId);
+        return {
+          name,
+          runtime: 'docker',
+          containerId: server.containerId,
+          ...stats
+        };
+      } else if (server.pid) {
+        // For process runtime, return basic info
+        return {
+          name,
+          runtime: 'process',
+          pid: server.pid,
+          status: server.status,
+          uptime: server.uptime || 0
+        };
+      }
+
+      return { name, status: server.status };
+    } catch (error) {
+      throw new Error(`Failed to get stats for ${name}: ${error.message}`);
     }
   }
 }

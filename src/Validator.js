@@ -12,7 +12,7 @@ class Validator {
     if (name.length < 1 || name.length > 255) {
       throw new Error('Process name must be between 1 and 255 characters');
     }
-    if (!/^[a-zA-Z0-9_\-\.]+$/.test(name)) {
+    if (!/^[a-zA-Z0-9_.-]+$/.test(name)) {
       throw new Error('Process name can only contain alphanumeric characters, underscores, hyphens, and dots');
     }
     return true;
@@ -113,7 +113,7 @@ class Validator {
     if (typeof type !== 'string') {
       throw new Error('Server type must be a string');
     }
-    if (!/^[a-z0-9_\-]+$/.test(type)) {
+    if (!/^[a-z0-9_-]+$/.test(type)) {
       throw new Error('Server type can only contain lowercase alphanumeric characters, underscores, and hyphens');
     }
     return true;
@@ -171,6 +171,7 @@ class Validator {
       return String(message);
     }
     // Remove control characters but keep newlines
+    // eslint-disable-next-line no-control-regex
     return message.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
   }
 
@@ -182,7 +183,7 @@ class Validator {
       throw new Error('Image name must be a string');
     }
     // Docker image name format: [REGISTRY_HOST[:REGISTRY_PORT]/]NAME[:TAG]
-    if (!/^([a-z0-9\-_.]+\.)*[a-z0-9\-_.]+\/[a-z0-9\-_.]+(:[\w.\-]+)?$|^[a-z0-9\-_.]+(:[\w.\-]+)?$/.test(image)) {
+    if (!/^([a-z0-9-_.]+\.)*[a-z0-9-_.]+\/[a-z0-9-_.]+(:[\w.-]+)?$|^[a-z0-9-_.]+(:[\w.-]+)?$/.test(image)) {
       throw new Error('Invalid Docker image name format');
     }
     return true;

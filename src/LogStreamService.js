@@ -191,7 +191,7 @@ class LogStreamService extends EventEmitter {
    */
   watchLogFile(processName, logFile) {
     try {
-      const watcher = fs.watch(logFile, (eventType, filename) => {
+      const watcher = fs.watch(logFile, (eventType) => {
         if (eventType === 'change') {
           this.emit('file-changed', { processName, file: logFile });
         }

@@ -1,0 +1,80 @@
+{
+  "name": "ANCHOR Plugin Registry",
+  "version": "1.0.0",
+  "description": "Official plugin registry for ANCHOR Cloud Platform",
+  "lastUpdated": "2024-01-15",
+  "plugins": [
+    {
+      "id": "anchor-monitoring-stack",
+      "name": "Monitoring Stack",
+      "description": "Complete observability solution with Prometheus metrics, Grafana dashboards, and alerting",
+      "version": "1.0.0",
+      "author": "ANCHOR Team",
+      "category": "monitoring",
+      "capabilities": ["metrics", "dashboards", "alerting", "observability"],
+      "downloadUrl": "http://localhost:3000/test-plugins/anchor-monitoring-stack-1.0.0.tar.gz",
+      "dependencies": ["prometheus", "grafana"],
+      "minVersion": "1.0.0"
+    },
+    {
+      "id": "anchor-security-system",
+      "name": "Security System",
+      "description": "Plugin signing, permission management, and sandboxed execution environment",
+      "version": "1.0.0",
+      "author": "ANCHOR Team",
+      "category": "security",
+      "capabilities": ["plugin-signing", "permissions", "sandboxing", "security"],
+      "downloadUrl": "http://localhost:3000/test-plugins/anchor-security-system-1.0.0.tar.gz",
+      "dependencies": [],
+      "minVersion": "1.0.0"
+    },
+    {
+      "id": "anchor-ai-optimizer",
+      "name": "AI Resource Optimizer",
+      "description": "Machine learning-powered resource allocation and workload optimization",
+      "version": "1.0.0",
+      "author": "ANCHOR Team",
+      "category": "ai",
+      "capabilities": ["optimization", "ml", "resource-management", "scaling"],
+      "downloadUrl": "http://localhost:3000/test-plugins/anchor-ai-optimizer-1.0.0.tar.gz",
+      "dependencies": ["tensorflow", "scikit-learn"],
+      "minVersion": "1.0.0"
+    },
+    {
+      "id": "anchor-backup-manager",
+      "name": "Backup Manager",
+      "description": "Automated backup and disaster recovery for workloads and data",
+      "version": "1.0.0",
+      "author": "ANCHOR Team",
+      "category": "infrastructure",
+      "capabilities": ["backup", "recovery", "disaster-recovery", "data-protection"],
+      "downloadUrl": "http://localhost:3000/test-plugins/anchor-backup-manager-1.0.0.tar.gz",
+      "dependencies": [],
+      "minVersion": "1.0.0"
+    },
+    {
+      "id": "anchor-log-aggregator",
+      "name": "Log Aggregator",
+      "description": "Centralized logging with ELK stack integration and advanced search",
+      "version": "1.0.0",
+      "author": "ANCHOR Team",
+      "category": "monitoring",
+      "capabilities": ["logging", "elk", "search", "aggregation"],
+      "downloadUrl": "http://localhost:3000/test-plugins/anchor-log-aggregator-1.0.0.tar.gz",
+      "dependencies": ["elasticsearch", "logstash", "kibana"],
+      "minVersion": "1.0.0"
+    },
+    {
+      "id": "anchor-api-gateway",
+      "name": "API Gateway",
+      "description": "Advanced API management with rate limiting, authentication, and routing",
+      "version": "1.0.0",
+      "author": "ANCHOR Team",
+      "category": "networking",
+      "capabilities": ["api-management", "rate-limiting", "authentication", "routing"],
+      "downloadUrl": "http://localhost:3000/test-plugins/anchor-api-gateway-1.0.0.tar.gz",
+      "dependencies": [],
+      "minVersion": "1.0.0"
+    }
+  ]
+}

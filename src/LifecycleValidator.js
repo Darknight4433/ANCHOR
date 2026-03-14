@@ -16,7 +16,8 @@ class LifecycleValidator {
   /**
    * Validate that lifecycle follows correct order
    */
-  static validateStartSequence(config) {
+  // eslint-disable-next-line no-unused-vars
+  static validateStartSequence(_config) {
     const checks = {
       directoryExists: false,
       logFileExists: false,

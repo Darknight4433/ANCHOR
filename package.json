@@ -1,35 +1,62 @@
 {
-  "name": "process-manager",
+  "name": "anchor",
   "version": "1.0.0",
-  "description": "A lightweight Node.js process manager for starting, stopping, restarting processes with PID and uptime tracking",
+  "description": "An orchestration layer for game servers and containers (Container-First)",
   "main": "src/index.js",
   "bin": {
-    "pm": "bin/cli.js",
-    "pm-daemon": "bin/daemon.js",
-    "pm-client": "bin/daemon-client.js"
+    "anchor": "bin/cli.js",
+    "anchor-daemon": "bin/daemon.js",
+    "anchor-client": "bin/daemon-client.js",
+    "anchor-node-agent": "bin/node-agent.js"
   },
   "scripts": {
-    "start": "node bin/cli.js",
+    "start": "node bin/platform.js",
+    "start:windows": "node bin/platform.js",
     "daemon": "node bin/daemon.js",
     "platform": "node bin/platform.js",
-    "test": "node examples/test.js",
-    "test:integration": "node examples/integration-test.js",
+    "node-agent": "node bin/node-agent.js",
+    "test": "jest test/",
+    "lint": "eslint src/ bin/ examples/ test/",
+    "lint:fix": "eslint src/ bin/ examples/ test/ --fix",
+    "test:integration": "jest test/integration/",
     "example": "node examples/example.js",
     "infrastructure": "node examples/infrastructure.js",
     "platform-demo": "node examples/platform-demo.js",
-    "install-service": "sudo bash install.sh"
+    "scaling-demo": "node examples/scaling-demo.js",
+    "plugin-demo": "node examples/plugin-demo.js",
+    "install-service": "sudo bash install.sh",
+    "audit:fix": "npm audit fix"
   },
-  "keywords": ["process-manager", "pm2", "process", "orchestration", "game-servers", "docker"],
+  "keywords": [
+    "process-manager",
+    "pm2",
+    "process",
+    "orchestration",
+    "game-servers",
+    "docker"
+  ],
   "author": "",
   "license": "MIT",
   "engines": {
     "node": ">=12.0.0"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.0",
+    "dockerode": "^4.0.9",
+    "dotenv": "^17.3.1",
     "express": "^4.18.0",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "joi": "^17.12.0",
     "jsonwebtoken": "^9.0.0",
+    "winston": "^3.11.0",
     "ws": "^8.13.0",
     "yaml": "^2.3.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
   }
 }

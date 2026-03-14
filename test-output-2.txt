@@ -1,0 +1,54 @@
+﻿node.exe : FAIL test/production-integration.test.js
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL test/product 
+   ion-integration.test.js:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  System Integrity Tests
+    ΓêÜ Principle 1: saves state correctly (11 ms)
+    ΓêÜ Principle 2: lifecycle order prevents watching empty 
+file (3 ms)
+    ├ù Integration: survives restart cycle (14 ms)
+
+  ΓùÅ System Integrity Tests ΓÇ║ Integration: survives restart 
+cycle
+
+    Unhandled error. ({
+      name: 'cycle-test',
+      error: Error: Process already registered: cycle-test
+
+    [0m [90m 122 |[39m   registerProcess(name[33m,[39m 
+config) {
+     [90m 123 |[39m     [36mif[39m 
+([36mthis[39m[33m.[39mstate[33m.[39mprocesses[name]) {
+    [31m[1m>[22m[39m[90m 124 |[39m       [36mthrow[39m 
+[36mnew[39m [33mError[39m([32m`Process already 
+registered: ${name}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 125 |[39m     }
+     [90m 126 |[39m
+     [90m 127 |[39m     
+[36mthis[39m[33m.[39mstate[33m.[39mprocesses[name] 
+[33m=[39m {[0m
+
+      at ProcessState.registerProcess 
+(src/ProcessState.js:124:13)
+      at ProcessManager.registerProcess [as start] 
+(src/index.js:59:18)
+      at Object.start 
+(test/production-integration.test.js:55:22)
+      })
+      at ProcessManager.emit [as start] (src/index.js:109:12)
+      at Object.start 
+(test/production-integration.test.js:55:22)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        0.401 s, estimated 1 s
+Ran all test suites matching 
+test/production-integration.test.js.

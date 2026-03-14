@@ -1,9 +1,8 @@
 const { EventEmitter } = require('events');
 const { spawn } = require('child_process');
-const path = require('path');
 const Validator = require('./Validator.js');
 const ProcessState = require('./ProcessState.js');
-const LifecycleValidator = require('./LifecycleValidator.js');
+const logger = require('./Logger.js');
 
 /**
  * ProcessManager - Production-grade process management system
@@ -75,6 +74,8 @@ class ProcessManager extends EventEmitter {
       // Record process start in state (atomic write to disk)
       this.state.recordProcessStart(name, childProcess.pid);
       
+      logger.info(`SERVER_STARTED ${name} pid=${childProcess.pid}`);
+      
       const processInfo = {
         name,
         command,
@@ -100,6 +101,7 @@ class ProcessManager extends EventEmitter {
         processInfo.exitCode = code;
         // Record stop in state (atomic write)
         this.state.recordProcessStop(name, code, signal);
+        logger.info(`SERVER_STOPPED ${name} code=${code} signal=${signal}`);
         this.emit('exit', { name, code, signal });
       });
 

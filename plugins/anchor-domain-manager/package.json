@@ -1,0 +1,12 @@
+{
+  "name": "anchor-domain-manager",
+  "version": "1.0.0",
+  "description": "Domain management plugin for ANCHOR - handles DNS, SSL certificates, and reverse proxy configuration",
+  "main": "index.js",
+  "author": "ANCHOR Team",
+  "license": "MIT",
+  "dependencies": {
+    "acme-client": "^5.0.0",
+    "axios": "^1.6.0"
+  }
+}

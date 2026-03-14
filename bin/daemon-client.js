@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 const net = require('net');
-const fs = require('fs');
-const path = require('path');
 const PersistenceManager = require('../src/PersistenceManager.js');
 
 /**

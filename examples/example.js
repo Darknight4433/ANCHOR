@@ -20,7 +20,7 @@ pm.on('restart', ({ name, restarts }) => {
 });
 
 pm.on('exit', ({ name, code, signal }) => {
-  console.log(`✓ Exited: ${name} (Exit code: ${code})`);
+  console.log(`✓ Exited: ${name} (Exit code: ${code}, Signal: ${signal})`);
 });
 
 pm.on('error', ({ name, error }) => {

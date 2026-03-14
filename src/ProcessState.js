@@ -328,7 +328,7 @@ class ProcessState extends EventEmitter {
    * @returns {boolean} Success
    */
   removeProcess(name) {
-    if (this.state.processes.hasOwnProperty(name)) {
+    if (Object.prototype.hasOwnProperty.call(this.state.processes, name)) {
       delete this.state.processes[name];
       this.saveState();
       return true;
