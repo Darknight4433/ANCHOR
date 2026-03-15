@@ -99,7 +99,7 @@ class CertificateManager {
     this.challenges.set(`/.well-known/acme-challenge/${challenge.token}`, keyAuthorization);
   }
 
-  async removeChallenge(authz, challenge, keyAuthorization) {
+  async removeChallenge(authz, challenge) {
     this.api.info(`Removing challenge for ${authz.identifier.value}`);
     if (this.challenges) {
       this.challenges.delete(`/.well-known/acme-challenge/${challenge.token}`);

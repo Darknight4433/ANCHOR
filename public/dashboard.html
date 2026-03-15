@@ -465,6 +465,10 @@
             padding: 8px 12px;
             font-size: 12px;
         }
+
+        #remotePluginList {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -543,7 +547,7 @@
             <div class="plugin-list" id="pluginList">
                 <p class="no-plugins">Loading plugins...</p>
             </div>
-            <div class="plugin-list" id="remotePluginList" style="display: none;">
+            <div class="plugin-list" id="remotePluginList">
                 <div class="plugin-search">
                     <input type="text" id="pluginSearch" placeholder="Search plugins..." onkeyup="searchRemotePlugins()">
                     <select id="pluginCategory" onchange="searchRemotePlugins()">
@@ -1190,5 +1194,6 @@
                 card.style.display = matchesSearch && matchesCategory ? 'block' : 'none';
             });
         }
+    </script>
 </body>
 </html>

@@ -63,7 +63,7 @@ class DNSManager {
     return response.data.result;
   }
 
-  async configureRoute53DNS(domain, record) {
+  async configureRoute53DNS() {
     // AWS Route53 implementation would go here
     this.api.warn('Route53 DNS configuration not implemented yet');
   }

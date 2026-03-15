@@ -1204,7 +1204,7 @@ class APIServer extends EventEmitter {
       ...options
     };
 
-    const result = await this.deployToNode(targetNode.nodeId, name, finalImage, deploymentOptions);
+    await this.deployToNode(targetNode.nodeId, name, finalImage, deploymentOptions);
 
     return {
       nodeId: targetNode.nodeId,
@@ -1254,7 +1254,7 @@ class APIServer extends EventEmitter {
   /**
    * Deploy game server (legacy compatibility)
    */
-  async deployGameServer({ name, image, region, memory, cpus, env, options }) {
+  async deployGameServer({ name, region, memory, cpus, options }) {
     // Find suitable node
     const targetNode = this.selectNode(null, region);
     if (!targetNode) {

@@ -107,7 +107,7 @@ class DatabaseProvisioningPlugin extends Plugin {
         name: dbName,
         type: dbType,
         appName,
-        connectionString: this.getConnectionString(dbType, dbName),
+        connectionString: this.getDefaultConnectionString(dbType),
         createdAt: new Date().toISOString()
       };
 
@@ -150,7 +150,9 @@ class DatabaseProvisioningPlugin extends Plugin {
         Image: 'mongo:7-jammy',
         name: dbName,
         Env: [
+          // cSpell:disable-next-line
           'MONGO_INITDB_ROOT_USERNAME=admin',
+          // cSpell:disable-next-line
           'MONGO_INITDB_ROOT_PASSWORD=password'
         ],
         HostConfig: {
@@ -164,7 +166,7 @@ class DatabaseProvisioningPlugin extends Plugin {
     return configs[dbType] || configs.postgresql;
   }
 
-  getConnectionString(dbType, dbName) {
+  getDefaultConnectionString(dbType) {
     const baseUrl = 'localhost'; // In production, this would be the actual host
 
     switch (dbType) {

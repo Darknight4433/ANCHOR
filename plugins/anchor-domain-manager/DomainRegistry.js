@@ -1,5 +1,4 @@
 const fs = require('fs').promises;
-const path = require('path');
 
 /**
  * Domain Registry - tracks domain registrations and mappings

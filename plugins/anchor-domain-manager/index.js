@@ -67,7 +67,7 @@ class DomainManagerPlugin extends Plugin {
   }
 
   async handleAppDeployment(data) {
-    const { name, domain, port, type } = data;
+    const { name, domain, port } = data;
 
     if (!domain) {
       // Auto-assign subdomain if no custom domain
@@ -104,7 +104,7 @@ class DomainManagerPlugin extends Plugin {
   }
 
   async handleServiceDeployment(data) {
-    const { name, domain, ports, type } = data;
+    const { name, domain, ports } = data;
 
     if (!domain) {
       // Services might not need public domains unless specified
