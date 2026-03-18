@@ -1,47 +1,217 @@
-﻿node.exe : FAIL test/api.test.js
+﻿
+> anchor@1.0.0 test
+> jest test/
+
+node.exe : PASS test/cargo-manager.test.js
 At line:1 char:1
-+ & "C:\Program Files\nodejs/node.exe" "C:\Program 
-Files\nodejs/node_mo ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-~~~~~~~~
-    + CategoryInfo          : NotSpecified: (FAIL test/api.tes 
-   t.js:String) [], RemoteException
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PASS test/cargo-manager.test.js:S 
+   tring) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
-  API Server (Auth)
-    ΓêÜ GET /health should return 200 ok (24 ms)
-    ├ù POST /api/auth/login should issue token on correct 
-credentials (81 ms)
-    ΓêÜ POST /api/auth/login should reject bad password (65 ms)
-    ΓêÜ GET /api/servers unprotected should return 401 (4 ms)
-    ΓêÜ GET /api/servers with token should return 200 (7 ms)
+  ΓùÅ Console
 
-  ΓùÅ API Server (Auth) ΓÇ║ POST /api/auth/login should issue 
-token on correct credentials
+    console.log
+      [dotenv@17.3.1] injecting env (7) from .env -- tip: ≡ƒöÉ encrypt with 
+Dotenvx: https://dotenvx.com
 
-    expect(received).toEqual(expected) // deep equality
+      at _log (node_modules/dotenv/lib/main.js:139:11)
 
-    Expected: 200
-    Received: 401
+    console.log
+      2026-03-18 21:18:02:182 [33mwarn[39m: [33mΓÜá∩╕Å [CargoManager] 
+Docker unavailable. Operating in Process Fallback Mode[39m
 
-    [0m [90m 42 |[39m       [33m.[39msend({ 
-username[33m:[39m [32m'admin_test'[39m[33m,[39m 
-password[33m:[39m [32m'admin'[39m })[33m;[39m
-     [90m 43 |[39m       
-    [31m[1m>[22m[39m[90m 44 |[39m     expect(res[33m.[3
-9mstatusCode)[33m.[39mtoEqual([35m200[39m)[33m;[39m
-     [90m    |[39m                            
-[31m[1m^[22m[39m
-     [90m 45 |[39m     expect(res[33m.[39mbody[33m.[39msu
-ccess)[33m.[39mtoEqual([36mtrue[39m)[33m;[39m
-     [90m 46 |[39m     expect(res[33m.[39mbody[33m.[39mto
-ken)[33m.[39mtoBeDefined()[33m;[39m
-     [90m 47 |[39m   })[33m;[39m[0m
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
 
-      at Object.toEqual (test/api.test.js:44:28)
+PASS test/production-integration.test.js
+  ΓùÅ Console
 
-Test Suites: 1 failed, 1 total
-Tests:       1 failed, 4 passed, 5 total
+    console.log
+      2026-03-18 21:18:02:182 [32minfo[39m: [32mSERVER_STARTED cycle-test 
+pid=10124[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:02:182 [32minfo[39m: [32mSERVER_STOPPED cycle-test 
+code=null signal=SIGTERM[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:02:182 [32minfo[39m: [32mSERVER_STARTED cycle-test 
+pid=2080[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:02:182 [32minfo[39m: [32mSERVER_STOPPED cycle-test 
+code=null signal=SIGTERM[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+PASS test/integration.test.js
+  ΓùÅ Console
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/integration-test-server/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32mUser admin_test (admin) 
+accessed GET /servers/integration-test-server/status[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/integration-test-server/stop[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32m≡ƒ¢æ Stopped AI Scaling 
+Engine[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32m≡ƒÄ» Stopped Matchmaking 
+Service[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+PASS test/api.test.js
+  ΓùÅ Console
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32mUser admin_test (admin) 
+accessed GET /servers[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32mUser admin_test (admin) 
+accessed GET /servers[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32mUser dev_test (developer) 
+accessed GET /servers[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [33mwarn[39m: [33mPermission denied for user 
+viewer_test (viewer) accessing /servers/test/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/test/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/test'%20OR%20'1'='1/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:03:183 [33mwarn[39m: [33mRate limit exceeded for 
+::ffff:127.0.0.1 on /api/auth/login[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/test/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/test/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/test/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/test/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/test-server/start[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32mUser admin_test (admin) 
+accessed POST /servers/test-server/stop[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32mUser admin_test (admin) 
+accessed GET /servers[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32m≡ƒ¢æ Stopped AI Scaling 
+Engine[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:18:04:184 [32minfo[39m: [32m≡ƒÄ» Stopped Matchmaking 
+Service[39m
+
+      at Console.log 
+(node_modules/winston/lib/winston/transports/console.js:87:23)
+
+
+Test Suites: 4 passed, 4 total
+Tests:       29 passed, 29 total
 Snapshots:   0 total
-Time:        0.738 s, estimated 1 s
-Ran all test suites matching test/api.test.js.
+Time:        3.317 s
+Ran all test suites matching test/.

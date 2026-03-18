@@ -45,11 +45,23 @@ class ProcessManager extends EventEmitter {
       throw error;
     }
 
-    // Check if process already exists
+    // Check if process already exists in-memory (running)
     if (this.processes.has(name)) {
       const existing = this.processes.get(name);
       if (existing.process && !existing.process.killed) {
         throw new Error(`Process "${name}" is already running with PID ${existing.pid}`);
+      }
+    }
+
+    // Ensure ProcessState is ready for re-starts
+    const existingState = this.state.getProcess(name);
+    if (existingState) {
+      // If previously registered but not running, clear it so we can re-register cleanly
+      if (existingState.status !== 'running') {
+        this.state.removeProcess(name);
+      } else {
+        // If state says running but we aren't tracking it, allow re-registration to avoid blocking restarts
+        this.state.removeProcess(name);
       }
     }
 

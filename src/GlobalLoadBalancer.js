@@ -13,6 +13,7 @@ class GlobalLoadBalancer extends EventEmitter {
       maxLatencyHistory: options.maxLatencyHistory || 10,
       regionPriority: options.regionPriority || 'latency', // 'latency', 'load', 'capacity'
       enableGeoRouting: options.enableGeoRouting !== false,
+      enableMultiCloud: options.enableMultiCloud || true,
       ...options
     };
 
@@ -21,6 +22,8 @@ class GlobalLoadBalancer extends EventEmitter {
     this.latencyHistory = new Map(); // regionId -> latency measurements
     this.clientLatencies = new Map(); // clientId -> measured latencies
     this.routingHistory = []; // Array of routing decisions
+    this.cloudProviderManager = options.cloudProviderManager || null; // Multi-cloud support
+    this.crossCloudRouting = new Map(); // Track cross-cloud routes
     this.interval = null;
   }
 
@@ -370,6 +373,158 @@ class GlobalLoadBalancer extends EventEmitter {
    */
   getServers() {
     return Array.from(this.servers.values());
+  }
+
+  /**
+   * Set cloud provider manager for multi-cloud support
+   */
+  setCloudProviderManager(cloudProviderManager) {
+    this.cloudProviderManager = cloudProviderManager;
+    logger.info('🌐 Cloud Provider Manager integrated with Global Load Balancer');
+  }
+
+  /**
+   * Multi-cloud: Route across multiple cloud providers
+   */
+  routePlayerMultiCloud(clientInfo = {}) {
+    if (!this.options.enableMultiCloud || !this.cloudProviderManager) {
+      // Fall back to traditional routing
+      return this.routePlayer(clientInfo);
+    }
+
+    // Get optimal region considering cost and latency
+    const optimalRegions = this.cloudProviderManager.getOptimalRegion({
+      sourceRegion: clientInfo.preferredRegion,
+      weightCost: 0.3,
+      weightLatency: 0.5,
+      weightAvailability: 0.2
+    });
+
+    if (!optimalRegions || optimalRegions.length === 0) {
+      return this.routePlayer(clientInfo); // Fallback to local routing
+    }
+
+    // Try to find server in optimal regions (in preference order)
+    for (const { region } of optimalRegions) {
+      const regionServers = Array.from(this.servers.values())
+        .filter(s => s.region === region && s.status === 'running' && s.players < s.maxPlayers);
+
+      if (regionServers.length > 0) {
+        // Get best server in this region
+        const bestServer = regionServers.reduce((best, current) => {
+          const bestScore = this.calculateServerScore(best, clientInfo);
+          const currentScore = this.calculateServerScore(current, clientInfo);
+          return currentScore > bestScore ? current : best;
+        });
+
+        this.crossCloudRouting.set(clientInfo.clientId || `route-${Date.now()}`, {
+          cloud: 'multi-cloud',
+          sourceRegion: clientInfo.preferredRegion,
+          targetRegion: region,
+          serverId: bestServer.id,
+          timestamp: Date.now()
+        });
+
+        logger.info(`🌐 Multi-cloud route: ${bestServer.id} in ${region}`);
+        this.emit('multiCloudRoute', {
+          clientInfo,
+          serverId: bestServer.id,
+          region,
+          cloud: 'multi-cloud'
+        });
+
+        return {
+          server: bestServer,
+          connectionInfo: {
+            address: bestServer.address,
+            port: bestServer.port,
+            region: bestServer.region,
+            cloud: 'multi-cloud',
+            estimatedLatency: Math.round(this.getAverageLatency(bestServer.region))
+          }
+        };
+      }
+    }
+
+    // No optimal regions available, use any available server
+    return this.routePlayer(clientInfo);
+  }
+
+  /**
+   * Get cross-cloud routing statistics
+   */
+  getCrossCloudStats() {
+    if (!this.cloudProviderManager) {
+      return { error: 'Cloud provider manager not initialized' };
+    }
+
+    const stats = this.cloudProviderManager.getDashboardStats();
+    return {
+      ...stats,
+      crossCloudRoutes: this.crossCloudRouting.size,
+      routingHistory: Array.from(this.crossCloudRouting.values()).slice(-10)
+    };
+  }
+
+  /**
+   * Check cloud provider health and failover if needed
+   */
+  async checkCloudHealth() {
+    if (!this.cloudProviderManager || !this.options.enableMultiCloud) {
+      return;
+    }
+
+    try {
+      const stats = this.cloudProviderManager.getDashboardStats();
+
+      // Check for unhealthy instances
+      const unhealthyInstances = stats.instanceHealth.filter(inst => inst.health !== 'healthy');
+
+      for (const unhealthyInst of unhealthyInstances) {
+        logger.warn(`🌐 Detected unhealthy cloud instance: ${unhealthyInst.id}`);
+
+        // Attempt failover
+        try {
+          await this.cloudProviderManager.failoverInstance(
+            unhealthyInst.id,
+            this.options.preferredFailoverRegion
+          );
+        } catch (error) {
+          logger.error(`Failed to failover instance: ${error.message}`);
+        }
+      }
+    } catch (error) {
+      logger.error(`Cloud health check failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Optimize deployment across clouds based on cost
+   */
+  recommendOptimalDeployment(requirements = {}) {
+    if (!this.cloudProviderManager) {
+      return null;
+    }
+
+    const optimalRegions = this.cloudProviderManager.getOptimalRegion({
+      sourceRegion: requirements.sourceRegion,
+      weightCost: requirements.allowHighCost ? 0.2 : 0.5,
+      weightLatency: 0.3,
+      weightAvailability: 0.2
+    });
+
+    if (!optimalRegions) {
+      return null;
+    }
+
+    return {
+      recommendations: optimalRegions.map(rec => ({
+        region: rec.region,
+        score: rec.score,
+        expectedCost: Math.round(rec.score * requirements.expectedLoad * 1000) / 100
+      })),
+      estimatedTotalCost: this.cloudProviderManager.getTotalCost()
+    };
   }
 }
 

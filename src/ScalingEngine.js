@@ -16,12 +16,15 @@ class ScalingEngine extends EventEmitter {
       scaleDownThreshold: options.scaleDownThreshold || 0.2, // 20% capacity
       idleTimeout: options.idleTimeout || 1200000, // 20 minutes
       predictiveEnabled: options.predictiveEnabled || true,
+      anomalyDetectionEnabled: options.anomalyDetectionEnabled || true,
+      anomalyThreshold: options.anomalyThreshold || 3.0, // Z-score threshold
       ...options
     };
 
     this.metrics = new Map(); // serverId -> metrics history
     this.scalingHistory = [];
     this.patterns = new Map(); // Learn usage patterns
+    this.anomalies = new Map(); // serverId -> anomaly history
     this.interval = null;
   }
 
@@ -94,6 +97,96 @@ class ScalingEngine extends EventEmitter {
   }
 
   /**
+   * Detect anomalies in server metrics using statistical methods
+   */
+  detectAnomalies(serverId, currentMetrics) {
+    const history = this.metrics.get(serverId);
+    if (!history || history.length < 10) return null; // Need sufficient data
+
+    const values = history.map(m => m.cpu || 0); // Use CPU as primary metric
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const stdDev = Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length);
+
+    if (stdDev === 0) return null; // No variation
+
+    const zScore = Math.abs((currentMetrics.cpu - mean) / stdDev);
+
+    if (zScore > this.options.anomalyThreshold) {
+      const anomaly = {
+        serverId,
+        metric: 'cpu',
+        value: currentMetrics.cpu,
+        zScore,
+        timestamp: Date.now(),
+        severity: zScore > 5 ? 'critical' : zScore > 3.5 ? 'high' : 'medium'
+      };
+
+      // Record anomaly
+      if (!this.anomalies.has(serverId)) {
+        this.anomalies.set(serverId, []);
+      }
+      this.anomalies.get(serverId).push(anomaly);
+
+      // Keep only last 50 anomalies per server
+      if (this.anomalies.get(serverId).length > 50) {
+        this.anomalies.get(serverId).shift();
+      }
+
+      return anomaly;
+    }
+
+    return null;
+  }
+
+  /**
+   * Get cost forecasting based on usage patterns
+   */
+  getCostForecast(serverId, hours = 24) {
+    const history = this.metrics.get(serverId);
+    if (!history || history.length < 5) return null;
+
+    // Simple linear regression for cost prediction
+    const dataPoints = history.slice(-20); // Last 20 points
+    const n = dataPoints.length;
+
+    if (n < 2) return null;
+
+    // Assume cost correlates with CPU usage (simplified)
+    const x = dataPoints.map((_, i) => i); // Time indices
+    const y = dataPoints.map(m => m.cpu || 0); // CPU values
+
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+    const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    // Predict future values
+    const predictions = [];
+    for (let i = 0; i < hours; i++) {
+      const predictedCpu = slope * (n + i) + intercept;
+      const predictedCost = Math.max(0, predictedCpu * 0.01); // Simplified cost calculation
+      predictions.push({
+        hour: i,
+        predictedCpu: Math.max(0, Math.min(100, predictedCpu)),
+        predictedCost
+      });
+    }
+
+    const totalPredictedCost = predictions.reduce((sum, p) => sum + p.predictedCost, 0);
+
+    return {
+      serverId,
+      forecastHours: hours,
+      totalPredictedCost: Math.round(totalPredictedCost * 100) / 100,
+      predictions,
+      confidence: Math.min(n / 20, 1) // Based on data points
+    };
+  }
+
+  /**
    * Get predictive scaling recommendation
    */
   getPredictiveScaling(serverId) {
@@ -134,6 +227,18 @@ class ScalingEngine extends EventEmitter {
 
       for (const server of servers) {
         await this.evaluateServerScaling(server, nodes);
+
+        // Check for anomalies
+        if (this.options.anomalyDetectionEnabled) {
+          const metrics = this.getLatestMetrics(server.id);
+          if (metrics) {
+            const anomaly = this.detectAnomalies(server.id, metrics);
+            if (anomaly) {
+              logger.warn(`ScalingEngine: Anomaly detected on ${server.id}: ${anomaly.metric}=${anomaly.value} (z-score: ${anomaly.zScore.toFixed(2)})`);
+              this.emit('anomaly_detected', anomaly);
+            }
+          }
+        }
       }
 
       // Check for predictive scaling
@@ -408,6 +513,11 @@ class ScalingEngine extends EventEmitter {
     const last24h = now - 86400000;
 
     const recentScaling = this.scalingHistory.filter(s => s.timestamp > last24h);
+    const totalAnomalies = Array.from(this.anomalies.values()).reduce((sum, arr) => sum + arr.length, 0);
+    const recentAnomalies = Array.from(this.anomalies.values())
+      .flat()
+      .filter(a => a.timestamp > last24h)
+      .length;
 
     return {
       totalScalingActions: this.scalingHistory.length,
@@ -417,7 +527,10 @@ class ScalingEngine extends EventEmitter {
       costOptimizations: recentScaling.filter(s => s.action === 'cost_optimization').length,
       predictiveScalings: recentScaling.filter(s => s.action.includes('predictive')).length,
       activeMetrics: this.metrics.size,
-      learnedPatterns: this.patterns.size
+      learnedPatterns: this.patterns.size,
+      totalAnomalies,
+      anomalies24h: recentAnomalies,
+      anomalyDetectionEnabled: this.options.anomalyDetectionEnabled
     };
   }
 }

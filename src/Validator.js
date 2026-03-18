@@ -29,8 +29,11 @@ class Validator {
       throw new Error('Command must be between 1 and 1024 characters');
     }
     // Prevent common injection patterns
-    if (command.includes('$(') || command.includes('`') || command.includes(';')) {
-      throw new Error('Command contains potentially dangerous patterns');
+    const dangerousPatterns = ['$(', '`', ';', '&&', '||', '|', '>', '<', '$', '{', '}', '\\'];
+    for (const pattern of dangerousPatterns) {
+      if (command.includes(pattern)) {
+        throw new Error(`Command contains potentially dangerous pattern: ${pattern}`);
+      }
     }
     return true;
   }

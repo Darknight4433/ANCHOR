@@ -1,6 +1,7 @@
 const EventEmitter = require('events');
 const fs = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
 const logger = require('./Logger.js');
 
 /**
@@ -46,8 +47,80 @@ class PluginManager extends EventEmitter {
   }
 
   /**
-   * Load a specific plugin
+   * Validate plugin manifest
    */
+  validatePluginManifest(packageJson) {
+    // Check required fields
+    if (!packageJson.name || !packageJson.version) {
+      return false;
+    }
+
+    // Check permissions (if specified)
+    if (packageJson.permissions) {
+      const allowedPermissions = ['network', 'dns', 'filesystem', 'database', 'system'];
+      if (!Array.isArray(packageJson.permissions)) {
+        return false;
+      }
+      for (const perm of packageJson.permissions) {
+        if (!allowedPermissions.includes(perm)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Verify plugin signature
+   */
+  async verifyPluginSignature(pluginPath, pluginName) {
+    try {
+      const sigFile = path.join(pluginPath, 'plugin.sig');
+      const pubKeyFile = path.join(__dirname, '..', 'keys', 'plugin-public.pem');
+
+      // Check if signature file exists
+      try {
+        await fs.access(sigFile);
+      } catch (error) {
+        // No signature required in development, but log warning
+        logger.warn(`⚠️ Plugin ${pluginName} has no signature file`);
+        return process.env.NODE_ENV !== 'production'; // Allow in dev, reject in prod
+      }
+
+      // Check if public key exists
+      try {
+        await fs.access(pubKeyFile);
+      } catch (error) {
+        logger.warn(`⚠️ Plugin public key not found`);
+        return process.env.NODE_ENV !== 'production';
+      }
+
+      // Read signature and public key
+      const signature = await fs.readFile(sigFile, 'base64');
+      const publicKey = await fs.readFile(pubKeyFile, 'utf8');
+
+      // Create hash of plugin files (simplified - hash package.json for now)
+      const packageJson = await fs.readFile(path.join(pluginPath, 'package.json'));
+      const hash = crypto.createHash('sha256').update(packageJson).digest();
+
+      // Verify signature
+      const verify = crypto.createVerify('RSA-SHA256');
+      verify.update(hash);
+      const isValid = verify.verify(publicKey, signature, 'base64');
+
+      if (!isValid) {
+        logger.error(`❌ Plugin ${pluginName} signature verification failed`);
+        return false;
+      }
+
+      logger.info(`✅ Plugin ${pluginName} signature verified`);
+      return true;
+    } catch (error) {
+      logger.error(`❌ Error verifying plugin signature: ${error.message}`);
+      return false;
+    }
+  }
   async loadPlugin(pluginName) {
     try {
       const pluginPath = path.join(this.pluginDir, pluginName);
@@ -65,6 +138,18 @@ class PluginManager extends EventEmitter {
       const packageJson = JSON.parse(await fs.readFile(packagePath, 'utf8'));
       const mainFile = packageJson.main || 'index.js';
       const mainPath = path.join(pluginPath, mainFile);
+
+      // Validate plugin manifest
+      if (!this.validatePluginManifest(packageJson)) {
+        logger.warn(`⚠️ Plugin ${pluginName} has invalid manifest, skipping`);
+        return;
+      }
+
+      // Verify plugin signature if present
+      if (!await this.verifyPluginSignature(pluginPath, pluginName)) {
+        logger.warn(`⚠️ Plugin ${pluginName} signature verification failed, skipping`);
+        return;
+      }
 
       // Check if main file exists
       try {

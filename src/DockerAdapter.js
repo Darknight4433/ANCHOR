@@ -44,58 +44,90 @@ class DockerAdapter extends EventEmitter {
     } = options;
 
     try {
-      // Build docker command
-      let dockerCmd = 'docker run';
+      // Build docker command arguments (safe from injection)
+      const dockerArgs = ['run'];
 
-      if (detach) dockerCmd += ' -d';
-      if (name) dockerCmd += ` --name ${name}`;
-      if (memory) dockerCmd += ` --memory ${memory}`;
-      if (cpus) dockerCmd += ` --cpus ${cpus}`;
+      if (detach) dockerArgs.push('-d');
+      if (name) {
+        dockerArgs.push('--name', name);
+      }
+      if (memory) {
+        dockerArgs.push('--memory', memory);
+      }
+      if (cpus) {
+        dockerArgs.push('--cpus', cpus);
+      }
 
       // Add ports
       ports.forEach(port => {
         if (typeof port === 'string') {
-          dockerCmd += ` -p ${port}`;
+          dockerArgs.push('-p', port);
         } else {
-          dockerCmd += ` -p ${port.host}:${port.container}`;
+          dockerArgs.push('-p', `${port.host}:${port.container}`);
         }
       });
 
       // Add volumes
       volumes.forEach(vol => {
         if (typeof vol === 'string') {
-          dockerCmd += ` -v ${vol}`;
+          dockerArgs.push('-v', vol);
         } else {
-          dockerCmd += ` -v ${vol.host}:${vol.container}`;
+          dockerArgs.push('-v', `${vol.host}:${vol.container}`);
         }
       });
 
       // Add environment variables
       Object.entries(env).forEach(([key, val]) => {
-        dockerCmd += ` -e ${key}="${val}"`;
+        dockerArgs.push('-e', `${key}=${val}`);
       });
 
-      dockerCmd += ` ${image}`;
+      dockerArgs.push(image);
 
-      if (cmd) dockerCmd += ` ${cmd}`;
+      if (cmd) {
+        if (Array.isArray(cmd)) {
+          dockerArgs.push(...cmd);
+        } else {
+          dockerArgs.push(cmd);
+        }
+      }
 
-      const { stdout } = await execAsync(dockerCmd);
-      const containerId = stdout.trim();
+      const child = spawn('docker', dockerArgs, { stdio: 'pipe' });
+      let stdout = '';
+      let stderr = '';
 
-      // Get container info
-      const info = await this.getContainerInfo(containerId);
-
-      this.containers.set(name || containerId, {
-        id: containerId,
-        name: name || containerId,
-        image,
-        status: 'running',
-        startTime: Date.now(),
-        restarts: 0
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
       });
 
-      this.emit('start', { name: name || containerId, id: containerId });
-      return { id: containerId, name: name || containerId, ...info };
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      return new Promise((resolve, reject) => {
+        child.on('close', (code) => {
+          if (code === 0) {
+            const containerId = stdout.trim();
+            // Get container info
+            this.getContainerInfo(containerId).then(info => {
+              this.containers.set(name || containerId, {
+                id: containerId,
+                name: name || containerId,
+                image,
+                status: 'running',
+                startTime: Date.now(),
+                restarts: 0
+              });
+
+              this.emit('start', { name: name || containerId, id: containerId });
+              resolve({ id: containerId, name: name || containerId, ...info });
+            }).catch(reject);
+          } else {
+            reject(new Error(`Docker command failed: ${stderr}`));
+          }
+        });
+
+        child.on('error', reject);
+      });
     } catch (error) {
       this.emit('error', { error, action: 'start' });
       throw error;

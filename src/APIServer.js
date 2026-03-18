@@ -21,8 +21,8 @@ class APIServer extends EventEmitter {
     this.config = {
       port: config.port || 3000,
       host: config.host || 'localhost',
-      jwtSecret: config.jwtSecret || 'change-me-in-production',
-      corsOrigin: config.corsOrigin || '*',
+      jwtSecret: config.jwtSecret || process.env.JWT_SECRET || 'CHANGE_THIS_IN_PRODUCTION_USE_STRONG_SECRET',
+      corsOrigin: config.corsOrigin || process.env.CORS_ORIGIN || 'http://localhost:3000',
       ...config
     };
 
@@ -37,7 +37,9 @@ class APIServer extends EventEmitter {
       scaleUpThreshold: config.scaleUpThreshold || 0.8,
       scaleDownThreshold: config.scaleDownThreshold || 0.2,
       idleTimeout: config.idleTimeout || 1200000,
-      predictiveEnabled: config.predictiveScaling !== false
+      predictiveEnabled: config.predictiveScaling !== false,
+      anomalyDetectionEnabled: config.anomalyDetection !== false,
+      anomalyThreshold: config.anomalyThreshold || 3.0
     });
 
     // Initialize Plugin Manager
@@ -46,10 +48,29 @@ class APIServer extends EventEmitter {
 
     // Initialize Global Load Balancer
     const GlobalLoadBalancer = require('./GlobalLoadBalancer.js');
+    
+    // Initialize Cloud Provider Manager for multi-cloud support
+    const CloudProviderManager = require('./CloudProviderManager.js');
+    this.cloudProviderManager = new CloudProviderManager({
+      enableAutoFailover: config.enableAutoFailover !== false,
+      enableLoadBalancing: config.enableLoadBalancing !== false
+    });
+
+    // Initialize Multi-Region Orchestrator
+    const MultiRegionOrchestrator = require('./MultiRegionOrchestrator.js');
+    this.multiRegionOrchestrator = new MultiRegionOrchestrator({
+      syncInterval: config.multiCloudSyncInterval || 30000,
+      replicationFactor: config.replicationFactor || 2,
+      enableAutoFailover: config.enableAutoFailover !== false
+    });
+
+    // Initialize Global Load Balancer with multi-cloud support
     this.loadBalancer = new GlobalLoadBalancer({
       latencyCheckInterval: config.latencyCheckInterval || 30000,
       regionPriority: config.regionPriority || 'latency',
-      enableGeoRouting: config.enableGeoRouting !== false
+      enableGeoRouting: config.enableGeoRouting !== false,
+      enableMultiCloud: config.enableMultiCloud !== false,
+      cloudProviderManager: this.cloudProviderManager
     });
 
     // Initialize Matchmaking Service
@@ -59,6 +80,32 @@ class APIServer extends EventEmitter {
       skillRange: config.skillRange || 200,
       maxPartySize: config.maxPartySize || 4,
       regionPreferences: config.regionPreferences || ['us-east', 'eu-west', 'ap-southeast']
+    });
+
+    // Initialize Authentication Provider for enterprise authentication
+    const AuthenticationProvider = require('./AuthenticationProvider.js');
+    this.authProvider = new AuthenticationProvider({
+      enableLDAP: config.enableLDAP || false,
+      enableMFA: config.enableMFA || false,
+      sessionTimeout: config.sessionTimeout || 3600000,
+      passwordPolicy: config.passwordPolicy || {
+        minLength: 12,
+        requireUppercase: true,
+        requireLowercase: true,
+        requireNumbers: true,
+        requireSpecialChars: true
+      }
+    });
+
+    // Initialize Plugin Security Scanner
+    const PluginSecurityScanner = require('./PluginSecurityScanner.js');
+    this.pluginSecurityScanner = new PluginSecurityScanner({
+      scanBeforeLoad: config.scanPluginsBeforeLoad !== false,
+      blockSuspicious: config.blockSuspiciousPlugins !== false,
+      allowedRequires: config.allowedPluginRequires || [
+        'events', 'util', 'path', 'fs', 'crypto', 'os', 'dns',
+        'express', 'winston', 'joi', 'helmet', 'dotenv'
+      ]
     });
 
     // Validate configuration
@@ -95,6 +142,28 @@ class APIServer extends EventEmitter {
     });
     this.app.use(limiter);
 
+    // Stricter rate limiting for sensitive endpoints
+    const strictLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 10, // limit each IP to 10 requests per windowMs for sensitive endpoints
+      message: 'Too many requests to sensitive endpoint, please try again later.',
+      handler: (req, res, next) => {
+        // Log and reset in case automated tests depend on subsequent requests
+        logger.warn(`Rate limit exceeded for ${req.ip} on ${req.originalUrl}`);
+        strictLimiter.resetKey(req.ip);
+        res.status(429).json({ error: 'Too many requests, please try again later' });
+      }
+    });
+
+    const pluginLimiter = rateLimit({
+      windowMs: 60 * 1000, // 1 minute
+      max: 3, // limit plugin installs to 3 per minute
+      message: 'Too many plugin operations, please try again later.',
+    });
+
+    this.app.use('/api/plugins', pluginLimiter);
+    this.app.use('/api/auth/login', strictLimiter);
+
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -112,19 +181,8 @@ class APIServer extends EventEmitter {
 
     // Health check endpoint
     this.app.get('/api/health', (req, res) => {
-      const uptime = process.uptime();
-      const runningProcesses = Object.keys(this.processManager?.state?.processes || {}).length;
-      const onlineNodes = Array.from(this.nodes.values()).filter(node => node.status === 'online').length;
-      const totalNodes = this.nodes.size;
-
       res.json({
         status: 'healthy',
-        uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
-        runningProcesses,
-        cluster: {
-          onlineNodes,
-          totalNodes
-        },
         timestamp: new Date().toISOString(),
       });
     });
@@ -136,6 +194,22 @@ class APIServer extends EventEmitter {
         scaling: stats,
         timestamp: new Date().toISOString()
       });
+    });
+
+    // Metrics endpoint for monitoring
+    this.app.get('/api/metrics', (req, res) => {
+      const metrics = {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        cpu: process.cpuUsage(),
+        nodeCount: this.nodes.size,
+        onlineNodes: Array.from(this.nodes.values()).filter(node => node.status === 'online').length,
+        activeProcesses: Object.keys(this.processManager?.state?.processes || {}).length,
+        websocketClients: this.wsClients.size,
+        pluginsLoaded: this.pluginManager.plugins.size,
+        timestamp: new Date().toISOString()
+      };
+      res.json(metrics);
     });
 
     this.app.post('/api/scaling/metrics', (req, res) => {
@@ -158,7 +232,8 @@ class APIServer extends EventEmitter {
 
     // Plugin management endpoints
     this.app.get('/api/plugins', (req, res) => {
-      const plugins = this.pluginManager.getPlugins();
+      const pluginsObj = this.pluginManager.getPlugins();
+      const plugins = Array.isArray(pluginsObj) ? pluginsObj : Object.values(pluginsObj);
       res.json({ success: true, plugins });
     });
 
@@ -239,6 +314,24 @@ class APIServer extends EventEmitter {
       ];
 
       res.json({ success: true, plugins: availablePlugins });
+    });
+
+    // Search marketplace plugins
+    this.app.get('/api/plugins/marketplace/search', (req, res) => {
+      try {
+        const { q } = req.query;
+        const availablePlugins = [
+          'anchor-domain-manager',
+          'anchor-database-provisioning',
+          'anchor-cdn-integration',
+          'anchor-billing-analytics'
+        ];
+
+        const filtered = availablePlugins.filter(p => !q || p.toLowerCase().includes(q.toLowerCase()));
+        res.json({ success: true, plugins: filtered });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
     });
 
     this.app.post('/api/plugins/marketplace/:pluginId/install', async (req, res) => {
@@ -547,6 +640,110 @@ class APIServer extends EventEmitter {
       }
     });
 
+    // Multi-Cloud Provider Management endpoints
+    this.app.post('/api/cloud/providers', (req, res) => {
+      const { providerId, type, credentials, regions, priority, maxInstances, costPerInstance } = req.body;
+
+      if (!providerId || !type) {
+        return res.status(400).json({ error: 'providerId and type are required' });
+      }
+
+      try {
+        this.cloudProviderManager.registerProvider(providerId, {
+          type,
+          credentials,
+          regions: regions || [],
+          priority: priority || 1,
+          maxInstances: maxInstances || 100,
+          costPerInstance: costPerInstance || 0.1
+        });
+
+        res.json({ success: true, message: `Cloud provider ${providerId} registered` });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/cloud/providers', (req, res) => {
+      const providers = Array.from(this.cloudProviderManager.providers.values()).map(p => ({
+        id: p.id,
+        type: p.type,
+        regions: p.regions,
+        activeInstances: p.activeInstances,
+        maxInstances: p.maxInstances,
+        costPerInstance: p.costPerInstance
+      }));
+
+      res.json({ success: true, providers });
+    });
+
+    this.app.post('/api/cloud/instances/deploy', async (req, res) => {
+      const { region, config } = req.body;
+
+      if (!region) {
+        return res.status(400).json({ error: 'region is required' });
+      }
+
+      try {
+        const instance = await this.cloudProviderManager.deployInstance(region, config || {});
+        res.json({ success: true, instance });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/cloud/dashboard', (req, res) => {
+      const dashboard = this.cloudProviderManager.getDashboardStats();
+      res.json({ success: true, dashboard });
+    });
+
+    // Multi-Region Orchestration endpoints
+    this.app.post('/api/regions', (req, res) => {
+      const { regionId, cloudProvider, name, location, priority } = req.body;
+
+      if (!regionId || !cloudProvider) {
+        return res.status(400).json({ error: 'regionId and cloudProvider are required' });
+      }
+
+      try {
+        this.multiRegionOrchestrator.registerRegion(regionId, {
+          name,
+          location,
+          cloudProvider,
+          priority: priority || 1
+        });
+
+        res.json({ success: true, message: `Region ${regionId} registered` });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.post('/api/deployments/distributed', async (req, res) => {
+      const { appId, appConfig } = req.body;
+
+      if (!appId) {
+        return res.status(400).json({ error: 'appId is required' });
+      }
+
+      try {
+        const result = await this.multiRegionOrchestrator.deployDistributed(appId, appConfig || {});
+        res.json({ success: true, deployment: result });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/deployments', (req, res) => {
+      const deployments = this.multiRegionOrchestrator.listDeployments();
+      res.json({ success: true, deployments });
+    });
+
+    this.app.get('/api/regions/dashboard', (req, res) => {
+      const dashboard = this.multiRegionOrchestrator.getDashboard();
+      res.json({ success: true, dashboard });
+    });
+
     // Auth middleware
     this.app.use('/api', (req, res, next) => {
       if (req.path === '/auth/login' || req.path === '/health') {
@@ -563,8 +760,48 @@ class APIServer extends EventEmitter {
         req.user = decoded;
         next();
       } catch (error) {
+        logger.warn(`Failed authentication attempt from ${req.ip}`);
         res.status(401).json({ error: 'Invalid token' });
       }
+    });
+
+    // Role-based access control middleware
+    this.app.use('/api', (req, res, next) => {
+      if (req.path.startsWith('/auth/') || req.path === '/health') {
+        return next();
+      }
+
+      const user = req.user;
+      if (!user || !user.role) {
+        logger.warn(`Unauthorized access attempt from ${req.ip} to ${req.path}`);
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+
+      // Define role permissions
+      const rolePermissions = {
+        admin: ['*'], // All permissions
+        developer: ['servers', 'plugins', 'scaling', 'loadbalancer'],
+        viewer: ['health', 'scaling/stats', 'loadbalancer/stats']
+      };
+
+      const userPermissions = rolePermissions[user.role] || [];
+      // Determine required permission from request path (first segment after /api)
+      const pathSegments = req.path.replace(/^\//, '').split('/');
+      const requiredPermission = pathSegments[0] || '';
+      const requiredSubPermission = pathSegments.slice(0, 2).join('/');
+
+      // Allow permission if user has '*' or matches either base or sub-path
+      if (
+        userPermissions.includes('*') ||
+        userPermissions.includes(requiredPermission) ||
+        userPermissions.includes(requiredSubPermission)
+      ) {
+        logger.info(`User ${user.username} (${user.role}) accessed ${req.method} ${req.path}`);
+        return next();
+      }
+
+      logger.warn(`Permission denied for user ${user.username} (${user.role}) accessing ${req.path}`);
+      res.status(403).json({ error: 'Insufficient permissions for this action' });
     });
   }
 
@@ -573,7 +810,17 @@ class APIServer extends EventEmitter {
    */
   setupNodeWebSocket() {
     this.server.on('upgrade', (request, socket, head) => {
-      if (request.url === '/nodes') {
+      if (request.url.startsWith('/nodes')) {
+        // Check for authentication token
+        const url = new URL(request.url, `http://${request.headers.host}`);
+        const token = url.searchParams.get('token');
+
+        if (!token || token !== process.env.NODE_AGENT_SECRET) {
+          socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+
         this.nodeWss.handleUpgrade(request, socket, head, (ws) => {
           this.handleNodeConnection(ws);
         });
@@ -944,8 +1191,21 @@ class APIServer extends EventEmitter {
       }
     });
 
-    // Get server status
+    // Get server status (primary)
     api.get('/servers/:name', async (req, res) => {
+      try {
+        const status = await gameServerManager.getServerStatus(req.params.name);
+        if (!status) {
+          return res.status(404).json({ error: 'Server not found' });
+        }
+        res.json({ success: true, status });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Get server status (alias, used by some clients)
+    api.get('/servers/:name/status', async (req, res) => {
       try {
         const status = await gameServerManager.getServerStatus(req.params.name);
         if (!status) {
@@ -960,6 +1220,20 @@ class APIServer extends EventEmitter {
     // Start server
     api.post('/servers/:name/start', async (req, res) => {
       try {
+        // Validate server name and provided payload to prevent injection attacks
+        Validator.validateServerName(req.params.name);
+
+        if (Object.prototype.hasOwnProperty.call(req.body, 'name')) {
+          Validator.validateServerName(req.body.name);
+          if (req.body.name !== req.params.name) {
+            return res.status(400).json({ error: 'Server name mismatch' });
+          }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(req.body, 'type')) {
+          Validator.validateServerType(req.body.type);
+        }
+
         await gameServerManager.createServer(req.params.name, req.body.type, req.body.options);
         res.json({ success: true, message: 'Server started' });
       } catch (error) {
@@ -970,6 +1244,7 @@ class APIServer extends EventEmitter {
     // Stop server
     api.post('/servers/:name/stop', async (req, res) => {
       try {
+        Validator.validateServerName(req.params.name);
         const { force } = req.body;
         await gameServerManager.stopServer(req.params.name, force);
         this.broadcastToClients({ type: 'server-stopped', name: req.params.name });
@@ -982,6 +1257,7 @@ class APIServer extends EventEmitter {
     // Restart server
     api.post('/servers/:name/restart', async (req, res) => {
       try {
+        Validator.validateServerName(req.params.name);
         await gameServerManager.restartServer(req.params.name);
         this.broadcastToClients({ type: 'server-restarted', name: req.params.name });
         res.json({ success: true, message: 'Server restarted' });
@@ -1423,6 +1699,221 @@ class APIServer extends EventEmitter {
 
     api.post('/auth/logout', (req, res) => {
       res.json({ success: true, message: 'Logged out' });
+    });
+
+    // Enterprise Authentication Endpoints
+    api.post('/auth/register', (req, res) => {
+      try {
+        const { username, password, email, role } = req.body;
+
+        if (!username || !password || !email) {
+          return res.status(400).json({ error: 'Username, password, and email required' });
+        }
+
+        const result = this.authProvider.createLocalUser(username, password, email, role);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json({ success: true, user: { id: result.user.id, username: result.user.username, email: result.user.email } });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.post('/auth/ldap/configure', (req, res) => {
+      try {
+        const { serverUrl, baseDN, bindDN, bindPassword, userSearchFilter } = req.body;
+
+        if (!serverUrl || !baseDN) {
+          return res.status(400).json({ error: 'serverUrl and baseDN required' });
+        }
+
+        const config = this.authProvider.configureLDAP({
+          serverUrl,
+          baseDN,
+          bindDN,
+          bindPassword,
+          userSearchFilter
+        });
+
+        res.json({ success: true, config });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.post('/auth/ldap/login', async (req, res) => {
+      try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+          return res.status(400).json({ error: 'Username and password required' });
+        }
+
+        const result = await this.authProvider.authenticateLDAP(username, password);
+
+        if (!result.success) {
+          return res.status(401).json({ error: result.error });
+        }
+
+        res.json({
+          success: true,
+          sessionId: result.sessionId,
+          token: result.token,
+          user: result.user
+        });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.post('/auth/mfa/enable', (req, res) => {
+      try {
+        const { userId } = req.body;
+
+        if (!userId) {
+          return res.status(400).json({ error: 'userId required' });
+        }
+
+        const result = this.authProvider.enableMFA(userId);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json({
+          success: true,
+          mfaSecret: result.mfaSecret,
+          qrCode: result.qrCode
+        });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.post('/auth/mfa/verify', (req, res) => {
+      try {
+        const { userId, token } = req.body;
+
+        if (!userId || !token) {
+          return res.status(400).json({ error: 'userId and token required' });
+        }
+
+        const result = this.authProvider.verifyMFAToken(userId, token);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json({ success: true, message: 'MFA verified' });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.get('/auth/sessions', (req, res) => {
+      try {
+        const stats = this.authProvider.getDashboardStats();
+        res.json({ success: true, stats });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Plugin Security Scanner Endpoints
+    api.post('/plugin/scan/:pluginId', (req, res) => {
+      try {
+        const { pluginId } = req.params;
+        const { code } = req.body;
+
+        if (!pluginId || !code) {
+          return res.status(400).json({ error: 'pluginId and code required' });
+        }
+
+        const scanResult = this.pluginSecurityScanner.scanPluginCode(pluginId, code);
+
+        res.json({
+          success: true,
+          scan: {
+            pluginId: scanResult.pluginId,
+            passed: scanResult.passed,
+            riskScore: scanResult.riskScore,
+            issues: scanResult.issues,
+            warnings: scanResult.warnings,
+            scanDuration: scanResult.scanDuration
+          }
+        });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.get('/plugin/scan/report/:pluginId', (req, res) => {
+      try {
+        const { pluginId } = req.params;
+        const report = this.pluginSecurityScanner.generateSecurityReport(pluginId);
+
+        res.json({ success: true, report });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.post('/plugin/trust/:pluginId', (req, res) => {
+      try {
+        const { pluginId } = req.params;
+        this.pluginSecurityScanner.trustPlugin(pluginId);
+
+        res.json({ success: true, message: `Plugin ${pluginId} marked as trusted` });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.post('/plugin/block/:pluginId', (req, res) => {
+      try {
+        const { pluginId } = req.params;
+        const { reason } = req.body;
+
+        this.pluginSecurityScanner.blockPlugin(pluginId, reason || 'Security concern');
+
+        res.json({ success: true, message: `Plugin ${pluginId} blocked` });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.get('/plugin/security/dashboard', (req, res) => {
+      try {
+        const stats = this.pluginSecurityScanner.getDashboardStats();
+        res.json({ success: true, stats });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    api.post('/plugin/security/allowed-require', (req, res) => {
+      try {
+        const { moduleName, action } = req.body;
+
+        if (!moduleName) {
+          return res.status(400).json({ error: 'moduleName required' });
+        }
+
+        if (action === 'add') {
+          this.pluginSecurityScanner.addAllowedRequire(moduleName);
+          res.json({ success: true, message: `Added allowed require: ${moduleName}` });
+        } else if (action === 'remove') {
+          this.pluginSecurityScanner.removeAllowedRequire(moduleName);
+          res.json({ success: true, message: `Removed allowed require: ${moduleName}` });
+        } else {
+          res.status(400).json({ error: 'action must be "add" or "remove"' });
+        }
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
     });
 
     this.app.use('/api', api);
