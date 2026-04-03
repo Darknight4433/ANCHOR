@@ -4,11 +4,16 @@ const request = require('supertest');
 const APIServer = require('../src/APIServer.js');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 describe('API Server (Auth)', () => {
   let apiServer;
   let adminToken;
   let developerToken;
+  let gitStoragePath;
+  let tempRepoPath;
 
   beforeAll(async () => {
     // Set up dummy config for tests
@@ -16,9 +21,26 @@ describe('API Server (Auth)', () => {
     process.env.ADMIN_PASSWORD_HASH = bcrypt.hashSync('test_password', 10);
     process.env.JWT_SECRET = 'test-secret-key-for-testing';
 
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'anchor-api-test-'));
+    gitStoragePath = path.join(tempRoot, 'git-deployments.json');
+    tempRepoPath = path.join(tempRoot, 'sample-app');
+    fs.mkdirSync(tempRepoPath, { recursive: true });
+    fs.writeFileSync(path.join(tempRepoPath, 'package.json'), JSON.stringify({
+      name: 'sample-app',
+      version: '1.0.0',
+      scripts: {
+        start: 'node index.js'
+      },
+      dependencies: {
+        express: '^4.18.0'
+      }
+    }, null, 2));
+    fs.writeFileSync(path.join(tempRepoPath, 'index.js'), 'console.log("hello");\n');
+
     apiServer = new APIServer({
       port: 3333,
-      jwtSecret: process.env.JWT_SECRET
+      jwtSecret: process.env.JWT_SECRET,
+      gitDeploymentStoragePath: gitStoragePath
     });
 
     // Stub GameServerManager for routes that need it
@@ -215,6 +237,33 @@ describe('API Server (Auth)', () => {
 
       expect(listRes.statusCode).toEqual(200);
       expect(Array.isArray(listRes.body.plugins)).toBe(true);
+    });
+
+    it('Developer should be able to create a git deployment plan', async () => {
+      const res = await request(apiServer.app)
+        .post('/api/deploy/git')
+        .set('Authorization', `Bearer ${developerToken}`)
+        .send({
+          repo: tempRepoPath,
+          mode: 'plan'
+        });
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toEqual(true);
+      expect(res.body.deployment.name).toEqual('sample-app');
+      expect(res.body.deployment.deploymentType).toEqual('service');
+      expect(res.body.deployment.status).toEqual('planned');
+    });
+
+    it('Should return git deployment history', async () => {
+      const res = await request(apiServer.app)
+        .get('/api/deploy/history?name=sample-app')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toEqual(true);
+      expect(Array.isArray(res.body.deployments)).toBe(true);
+      expect(res.body.deployments.length).toBeGreaterThanOrEqual(1);
     });
   });
 

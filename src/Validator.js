@@ -225,6 +225,29 @@ class Validator {
   }
 
   /**
+   * Validate git repository reference or local repo path
+   */
+  static validateRepositoryReference(repo) {
+    if (typeof repo !== 'string' || repo.trim().length === 0) {
+      throw new Error('Repository reference must be a non-empty string');
+    }
+
+    const trimmed = repo.trim();
+    const looksLikeUrl = /^(https?:\/\/|git@|ssh:\/\/|file:\/\/)/i.test(trimmed);
+    const looksLikeLocalPath = /^[a-zA-Z]:\\|^\.\.?[\\/]|^[\\/]/.test(trimmed);
+
+    if (!looksLikeUrl && !looksLikeLocalPath) {
+      throw new Error('Repository reference must be a valid URL or local path');
+    }
+
+    if (trimmed.includes('..')) {
+      throw new Error('Repository reference cannot contain directory traversal sequences');
+    }
+
+    return true;
+  }
+
+  /**
    * Validate restart policy
    */
   static validateRestartPolicy(policy) {

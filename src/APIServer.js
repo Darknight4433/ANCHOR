@@ -10,6 +10,8 @@ const EventEmitter = require('events');
 const Validator = require('./Validator.js');
 const logger = require('./Logger.js');
 const GameServerTemplates = require('./GameServerTemplates.js');
+const DockerAdapter = require('./DockerAdapter.js');
+const GitDeploymentService = require('./GitDeploymentService.js');
 
 /**
  * APIServer - REST API for process and game server management
@@ -27,6 +29,11 @@ class APIServer extends EventEmitter {
     };
 
     this.processManager = processManager;
+    this.localDocker = new DockerAdapter();
+    this.gitDeploymentService = new GitDeploymentService({
+      storagePath: config.gitDeploymentStoragePath,
+      workspaceRoot: config.gitDeploymentWorkspace
+    });
     this.nodes = new Map(); // nodeId -> node info
     this.nodeConnections = new Map(); // nodeId -> WebSocket
 
@@ -147,7 +154,7 @@ class APIServer extends EventEmitter {
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 10, // limit each IP to 10 requests per windowMs for sensitive endpoints
       message: 'Too many requests to sensitive endpoint, please try again later.',
-      handler: (req, res, next) => {
+      handler: (req, res) => {
         // Log and reset in case automated tests depend on subsequent requests
         logger.warn(`Rate limit exceeded for ${req.ip} on ${req.originalUrl}`);
         strictLimiter.resetKey(req.ip);
@@ -780,7 +787,7 @@ class APIServer extends EventEmitter {
       // Define role permissions
       const rolePermissions = {
         admin: ['*'], // All permissions
-        developer: ['servers', 'plugins', 'scaling', 'loadbalancer'],
+        developer: ['servers', 'plugins', 'scaling', 'loadbalancer', 'deploy'],
         viewer: ['health', 'scaling/stats', 'loadbalancer/stats']
       };
 
@@ -1311,6 +1318,111 @@ class APIServer extends EventEmitter {
     });
 
     // Unified Deployment API - supports multiple workload types
+    api.post('/deploy/git', async (req, res) => {
+      let plan = null;
+
+      try {
+        const schema = Joi.object({
+          repo: Joi.string().required(),
+          ref: Joi.string().optional(),
+          type: Joi.string().valid('auto', 'web', 'service', 'job', 'ai', 'game').optional().default('auto'),
+          name: Joi.string().min(1).max(50).optional(),
+          mode: Joi.string().valid('plan', 'deploy').optional().default('deploy'),
+          region: Joi.string().optional(),
+          domain: Joi.string().optional(),
+          env: Joi.object().optional()
+        });
+
+        const { error, value } = schema.validate(req.body);
+        if (error) {
+          return res.status(400).json({ error: error.details[0].message });
+        }
+
+        plan = await this.gitDeploymentService.prepareDeployment(value);
+
+        if (value.mode === 'plan') {
+          const plannedRecord = this.gitDeploymentService.recordDeployment({
+            ...plan,
+            status: 'planned'
+          });
+          return res.json({ success: true, deployment: plannedRecord });
+        }
+
+        const imageTag = `anchor/${plan.name}:v${plan.version}`;
+        await this.localDocker.buildImage(plan.build.contextPath, imageTag, plan.build.dockerfilePath);
+
+        const result = await this.deployByType({
+          type: plan.deploymentType,
+          name: plan.name,
+          image: imageTag,
+          region: plan.region,
+          env: plan.env,
+          domain: plan.domain,
+          options: {}
+        });
+
+        const record = this.gitDeploymentService.recordDeployment({
+          ...plan,
+          imageTag,
+          status: 'deployed',
+          ...result
+        });
+
+        this.pluginManager.emitToPlugins('gitDeployed', {
+          name: plan.name,
+          deploymentType: plan.deploymentType,
+          repo: plan.repo,
+          version: plan.version
+        });
+
+        res.json({ success: true, deployment: record });
+      } catch (error) {
+        if (plan) {
+          this.gitDeploymentService.recordDeployment({
+            ...plan,
+            status: 'failed',
+            error: error.message
+          });
+        }
+        res.status(400).json({ error: error.message });
+      }
+    });
+
+    api.get('/deploy/history', (req, res) => {
+      const deployments = this.gitDeploymentService.listDeployments({
+        name: req.query.name
+      });
+      res.json({ success: true, deployments });
+    });
+
+    api.post('/deploy/rollback/:name', async (req, res) => {
+      try {
+        const target = this.gitDeploymentService.getRollbackTarget(req.params.name, {
+          version: req.body?.version,
+          deploymentId: req.body?.deploymentId
+        });
+
+        if (!target) {
+          return res.status(404).json({ error: 'No rollback target found' });
+        }
+
+        const result = await this.deployByType({
+          type: target.deploymentType,
+          name: target.name,
+          image: target.imageTag,
+          region: target.region,
+          env: target.env || {},
+          domain: target.domain,
+          options: {}
+        });
+
+        const record = this.gitDeploymentService.createRollbackRecord(target, result);
+        res.json({ success: true, deployment: record });
+      } catch (error) {
+        res.status(400).json({ error: error.message });
+      }
+    });
+
     api.post('/deploy', async (req, res) => {
       try {
         const schema = Joi.object({
@@ -1333,27 +1445,18 @@ class APIServer extends EventEmitter {
 
         const { type, name, image, region, replicas, memory, cpus, env, domain, options = {} } = value;
 
-        let deploymentResult;
-
-        switch (type) {
-          case 'web':
-            deploymentResult = await this.deployWebApp({ name, image, region, memory, cpus, env, domain, options });
-            break;
-          case 'service':
-            deploymentResult = await this.deployService({ name, image, region, replicas, memory, cpus, env, domain, options });
-            break;
-          case 'job':
-            deploymentResult = await this.deployJob({ name, image, region, memory, cpus, env, options });
-            break;
-          case 'ai':
-            deploymentResult = await this.deployAIModel({ name, image, region, memory, cpus, env, options });
-            break;
-          case 'game':
-            deploymentResult = await this.deployGameServer({ name, image, region, memory, cpus, env, options });
-            break;
-          default:
-            return res.status(400).json({ error: `Unsupported deployment type: ${type}` });
-        }
+        const deploymentResult = await this.deployByType({
+          type,
+          name,
+          image,
+          region,
+          replicas,
+          memory,
+          cpus,
+          env,
+          domain,
+          options
+        });
 
         // Emit plugin events
         this.pluginManager.emitToPlugins(`${type}Deployed`, {
@@ -1379,18 +1482,95 @@ class APIServer extends EventEmitter {
     this.app.use('/api', api);
   }
 
+  async deployByType({ type, name, image, region, replicas, memory, cpus, env, domain, options = {} }) {
+    switch (type) {
+      case 'web':
+        return this.deployWebApp({ name, image, region, memory, cpus, env, domain, options });
+      case 'service':
+        return this.deployService({ name, image, region, replicas, memory, cpus, env, domain, options });
+      case 'job':
+        return this.deployJob({ name, image, region, memory, cpus, env, options });
+      case 'ai':
+        return this.deployAIModel({ name, image, region, memory, cpus, env, options });
+      case 'game':
+        return this.deployGameServer({ name, image, region, memory, cpus, env, options });
+      default:
+        throw new Error(`Unsupported deployment type: ${type}`);
+    }
+  }
+
+  async deployLocally({ name, image, internalPort, env, memory, cpus, domain, job = false }) {
+    const dockerAvailable = await this.localDocker.isDockerAvailable();
+    if (!dockerAvailable) {
+      throw new Error('No connected node available and local Docker is not installed');
+    }
+
+    try {
+      await this.localDocker.removeContainer(name, true);
+    } catch (error) {
+      // Ignore missing container errors during redeploy.
+    }
+
+    const port = job ? null : await this.allocatePort();
+    const ports = port && internalPort ? [{ host: String(port), container: String(internalPort) }] : [];
+    const result = await this.localDocker.startContainer(image, {
+      name,
+      ports,
+      env,
+      memory,
+      cpus,
+      detach: true
+    });
+
+    return {
+      nodeId: 'local',
+      region: 'local',
+      port,
+      containerId: result.id,
+      mode: 'local',
+      domain: domain || null,
+      url: port ? (domain ? `https://${domain}` : `http://localhost:${port}`) : null
+    };
+  }
+
+  allocatePort() {
+    const net = require('net');
+
+    return new Promise((resolve, reject) => {
+      const server = net.createServer();
+      server.unref();
+      server.on('error', reject);
+      server.listen(0, '127.0.0.1', () => {
+        const { port } = server.address();
+        server.close(() => resolve(port));
+      });
+    });
+  }
+
   /**
    * Deploy web application
    */
   async deployWebApp({ name, image, region, memory, cpus, env, domain, options }) {
     // Find suitable node
     const targetNode = this.selectNode(null, region);
-    if (!targetNode) {
-      throw new Error('No suitable node available for web app deployment');
-    }
 
     // Default image if not specified
     const finalImage = image || 'node:18-alpine';
+
+    if (!targetNode) {
+      return this.deployLocally({
+        name,
+        image: finalImage,
+        internalPort: 3000,
+        env: {
+          NODE_ENV: 'production',
+          ...env
+        },
+        memory: memory || '512m',
+        cpus: cpus || 1,
+        domain
+      });
+    }
 
     // Deploy container
     const deploymentOptions = {
@@ -1422,12 +1602,24 @@ class APIServer extends EventEmitter {
   async deployService({ name, image, region, replicas, memory, cpus, env, domain, options }) {
     // Find suitable node
     const targetNode = this.selectNode(null, region);
-    if (!targetNode) {
-      throw new Error('No suitable node available for service deployment');
-    }
 
     // Default image if not specified
     const finalImage = image || 'node:18-alpine';
+
+    if (!targetNode) {
+      return this.deployLocally({
+        name,
+        image: finalImage,
+        internalPort: 8000,
+        env: {
+          NODE_ENV: 'production',
+          ...env
+        },
+        memory: memory || '1g',
+        cpus: cpus || 2,
+        domain
+      });
+    }
 
     // Deploy container(s)
     const deploymentOptions = {
@@ -1461,12 +1653,23 @@ class APIServer extends EventEmitter {
   async deployJob({ name, image, region, memory, cpus, env, options }) {
     // Find suitable node
     const targetNode = this.selectNode(null, region);
-    if (!targetNode) {
-      throw new Error('No suitable node available for job deployment');
-    }
 
     // Default image if not specified
     const finalImage = image || 'python:3.9-slim';
+
+    if (!targetNode) {
+      return this.deployLocally({
+        name,
+        image: finalImage,
+        internalPort: null,
+        env: {
+          ...env
+        },
+        memory: memory || '2g',
+        cpus: cpus || 2,
+        job: true
+      });
+    }
 
     // Deploy job container
     const deploymentOptions = {
@@ -1496,12 +1699,22 @@ class APIServer extends EventEmitter {
   async deployAIModel({ name, image, region, memory, cpus, env, options }) {
     // Find GPU-enabled node
     const targetNode = this.selectNode(null, region, { gpu: true });
-    if (!targetNode) {
-      throw new Error('No GPU-enabled node available for AI model deployment');
-    }
 
     // Default image if not specified
     const finalImage = image || 'tensorflow/tensorflow:latest-gpu';
+
+    if (!targetNode) {
+      return this.deployLocally({
+        name,
+        image: finalImage,
+        internalPort: 8501,
+        env: {
+          ...env
+        },
+        memory: memory || '4g',
+        cpus: cpus || 4
+      });
+    }
 
     // Deploy AI container
     const deploymentOptions = {
@@ -1533,14 +1746,22 @@ class APIServer extends EventEmitter {
   async deployGameServer({ name, region, memory, cpus, options }) {
     // Find suitable node
     const targetNode = this.selectNode(null, region);
-    if (!targetNode) {
-      throw new Error('No suitable node available for game server deployment');
-    }
 
     // Use game server templates
     const template = GameServerTemplates.getTemplate(options.type || 'minecraft');
     if (!template) {
       throw new Error(`Unknown game server type: ${options.type}`);
+    }
+
+    if (!targetNode) {
+      return this.deployLocally({
+        name,
+        image: template.image,
+        internalPort: 25565,
+        env: template.env,
+        memory: memory || template.memory,
+        cpus: cpus || 2
+      });
     }
 
     const deploymentOptions = {

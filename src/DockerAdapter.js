@@ -280,6 +280,36 @@ class DockerAdapter extends EventEmitter {
   }
 
   /**
+   * Build image from a local context directory
+   */
+  async buildImage(contextPath, tag, dockerfilePath = null) {
+    const dockerArgs = ['build', '-t', tag];
+    if (dockerfilePath) {
+      dockerArgs.push('-f', dockerfilePath);
+    }
+    dockerArgs.push(contextPath);
+
+    const child = spawn('docker', dockerArgs, { stdio: 'pipe' });
+    let stderr = '';
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    return new Promise((resolve, reject) => {
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({ tag });
+          return;
+        }
+        reject(new Error(`Docker build failed: ${stderr}`));
+      });
+
+      child.on('error', reject);
+    });
+  }
+
+  /**
    * Get container uptime
    */
   getContainerUptime(containerId) {
